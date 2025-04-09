@@ -1,6 +1,7 @@
 import React from 'react';
 import { AcheteurList } from '@/modules/acheteurs/components/AcheteurList';
 import { FactureList } from '@/modules/factures/components/FactureList';
+import { PaiementList } from '@/modules/paiements/components/PaiementList';
 
 interface Props {
   selected: string;
@@ -17,6 +18,7 @@ export const DashboardContent = ({ selected }: Props) => {
       )}
       {selected === 'acheteurs' && <AcheteurList />}
       {selected === 'factures' && <FactureList />}
+      {selected === 'paiements' && <PaiementList />}
     </main>
   );
 };

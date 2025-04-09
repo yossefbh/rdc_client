@@ -12,6 +12,8 @@ export const DashboardSidebar = ({ onSelect }: Props) => {
         <li onClick={() => onSelect('menu')} className="hover:text-blue-300 cursor-pointer">Accueil</li>
         <li onClick={() => onSelect('acheteurs')} className="hover:text-blue-300 cursor-pointer">Acheteurs</li>
         <li onClick={() => onSelect('factures')} className="hover:text-blue-300 cursor-pointer">Factures</li>
+        <li onClick={() => onSelect('paiements')} className="hover:text-blue-300 cursor-pointer">Plans de paiements</li>
+
       </ul>
     </aside>
   );
