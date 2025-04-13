@@ -7,20 +7,21 @@ export const usePaiements = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const data = await getPlansPaiement();
-        setPlans(data);
-      } catch (err) {
-        setError("Erreur lors du chargement des plans de paiement");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchPlans = async () => {
+    try {
+      setLoading(true);
+      const data = await getPlansPaiement();
+      setPlans(data);
+    } catch (err) {
+      setError("Erreur lors du chargement des plans de paiement");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchPlans();
   }, []);
 
-  return { plans, loading, error };
+  return { plans, loading, error, refresh: fetchPlans };
 };

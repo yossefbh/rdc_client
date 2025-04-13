@@ -4,6 +4,7 @@ import { Facture } from "@/modules/acheteurs/types/Interface";
 import { getAcheteurs } from "@/modules/acheteurs/services/AcheteurService";
 import { Acheteur } from "@/modules/acheteurs/types/Interface";
 import { createPlanPaiement } from "@/modules/paiements/services/paiementService";
+import { toast } from "react-toastify";
 
 export const FactureList = () => {
   const [factures, setFactures] = useState<Facture[]>([]);
@@ -46,8 +47,7 @@ export const FactureList = () => {
 
   const eligibleFactures = filteredByStatus.filter(
     facture => facture.status !== "EnCoursDePaiement" && 
-             facture.status !== "EnLitige" &&
-             facture.montantRestantDue > 0
+               facture.status!="Payee"
   );
 
   useEffect(() => {
@@ -63,15 +63,30 @@ export const FactureList = () => {
       prev.includes(factureID) ? prev.filter((id) => id !== factureID) : [...prev, factureID]
     );
   };
+  const PlanificationErrorToast = () => (
+    <div className="text-sm">
+      <strong className="block text-base mb-2">Planification impossible !</strong>
+      <p className="mb-2">Raisons possibles :</p>
+      <ul className="list-disc pl-6 space-y-1">
+        <li>La facture est déjà en cours de paiement</li>
+        <li>La facture est déjà payée</li>
+        <li>La facture est en litige</li>
+      </ul>
+    </div>
+  );
 
   const handlePlanifierPaiement = () => {
     if (!selectedAcheteur) {
-      alert("Veuillez choisir un acheteur.");
+      toast.error("Veuillez choisir un acheteur.", {
+        autoClose: 2500,
+      });
       return;
     }
 
     if (selectedFactures.length === 0) {
-      alert("Il faut au moins choisir une facture.");
+      toast.error("Il faut au moins choisir une facture.", {
+        autoClose: 2500,
+      });
       return;
     }
 
@@ -82,9 +97,11 @@ export const FactureList = () => {
     if (facturesSelectionnees.some(facture => 
       facture.status === "EnCoursDePaiement" || 
       facture.status === "EnLitige" ||
-      facture.montantRestantDue === 0
+      facture.montantRestantDue === 0 
     )) {
-      alert("Planification impossible !.\n\nRaisons possibles :\n- La facture est déjà en cours de paiement\n- La facture est déjà payée \n- La facture est en litige");
+      toast.error(<PlanificationErrorToast />, {
+        className: "custom-toast",
+      });
       return;
     }
 
@@ -129,7 +146,9 @@ export const FactureList = () => {
 
   const handleValidation = async () => {
     if (!resultat || selectedFactures.length === 0) {
-      alert("Veuillez d'abord calculer le plan de paiement");
+      toast.error("Veuillez d'abord calculer le plan de paiement", {
+        autoClose: 3000,
+      });
       return;
     }
   
@@ -144,12 +163,16 @@ export const FactureList = () => {
   
       await createPlanPaiement(planData);
   
-      alert("Plan de paiement validé avec succès ! Un email a été envoyé.");
+      toast.success("Plan de paiement validé avec succès ! Un email a été envoyé.", {
+        autoClose: 3000,
+      });
       setShowModal(false);
       getFactures().then(setFactures).catch(console.error);
     } catch (error) {
       console.error("Erreur:", error);
-      alert("Une erreur est survenue lors de la validation");
+      toast.error("Une erreur est survenue lors de la validation", {
+        autoClose: 3000,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -157,8 +180,6 @@ export const FactureList = () => {
 
   return (
     <div className="p-4">
-
-      
       <div className="flex justify-between items-center mb-4">
         <div className="flex space-x-2">
           <button 
@@ -212,29 +233,29 @@ export const FactureList = () => {
       </select>
 
       <div className="flex">
-  {selectedAcheteur && (
-    <div className="flex flex-col mr-3" style={{ marginTop: '2.75rem' }}> {/* Ajustement précis de la marge */}
-      {filteredByStatus.map((facture) => {
-        const isEligible = eligibleFactures.some(f => f.factureID === facture.factureID);
-        return (
-          <div 
-            key={facture.factureID} 
-            className="h-12 flex items-center justify-center" /* Haureur fixe pour chaque ligne */
-            style={{ height: '3rem' }} /* Correspond à la hauteur des lignes du tableau */
-          >
-            {isEligible && (
-              <input
-                type="checkbox"
-                className="h-5 w-5 mt-3"
-                onChange={() => toggleSelection(facture.factureID)}
-                checked={selectedFactures.includes(facture.factureID)}
-              />
-            )}
+        {selectedAcheteur &&  (
+          <div className="flex flex-col mr-3" style={{ marginTop: '2.75rem' }}>
+            {filteredByStatus.map((facture) => {
+              const isEligible = eligibleFactures.some(f => f.factureID === facture.factureID);
+              return (
+                <div 
+                  key={facture.factureID} 
+                  className="h-12 flex items-center justify-center"
+                  style={{ height: '3rem' }}
+                >
+                  {isEligible && (
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5 mt-3"
+                      onChange={() => toggleSelection(facture.factureID)}
+                      checked={selectedFactures.includes(facture.factureID)}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
-    </div>
-  )}
+        )}
 
         <table className="w-full bg-white shadow rounded-lg overflow-hidden">
           <thead>
@@ -242,7 +263,7 @@ export const FactureList = () => {
               <th className="p-3 text-lg">Numéro</th>
               <th className="p-3 text-lg">Échéance</th>
               <th className="p-3 text-lg">Montant Total</th>
-              <th className="p-3 text-lg">Montant Restant</th>
+              <th className="p-3 text-lg">Montant Due </th>
               <th className="p-3 text-lg">Statut</th>
             </tr>
           </thead>
@@ -279,12 +300,12 @@ export const FactureList = () => {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+        <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
             <h2 className="text-2xl font-bold mb-6 text-center">Plan de Paiement</h2>
 
             <div className="mb-4 flex items-center gap-2">
-            <label className="whitespace-nowrap">Option :</label>
+              <label className="whitespace-nowrap">Option :</label>
               <select
                 value={optionPaiement}
                 onChange={(e) => {
@@ -299,7 +320,6 @@ export const FactureList = () => {
                 <option value="montant">Montant par échéance</option>
               </select>
             </div>
-
 
             <input
               type="number"
