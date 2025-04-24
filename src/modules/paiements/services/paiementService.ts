@@ -1,28 +1,68 @@
-// src/modules/paiements/services/paiementService.ts
-
 import { PlanDePaiement, PaiementDate } from "../types/Interface";
 
 export const createPlanPaiement = async (planData: {
   montantTotal: number;
   nombreDeEcheances: number;
-  montantDeChaqueEcheance: number;
   factureIDs: number[];
 }) => {
-  const response = await fetch("https://localhost:7284/api/PlanDePaiement", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(planData),
-  });
+  try {
+    const response = await fetch("https://localhost:7284/api/PlanDePaiement", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(planData),
+    });
 
-  if (!response.ok) {
-    throw new Error("Erreur lors de la création du plan");
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur lors de la création du plan: ${errorText}`);
+    }
+
+    const result = await response.json();
+    if (typeof result === "number") {
+      return { planID: result }; 
+    }
+    return result; 
+  } catch (error) {
+    throw error;
   }
-
-  return await response.json();
 };
+export const createPaiementDates = async (paiementDates: {
+  paiementDates: {
+    planID: number;
+    echeanceDate: string;
+    montantDeEcheance: number;
+    montantPayee: number;
+    montantDue: number;
+    isPaid: boolean;
+    isLocked: boolean;
+  }[];
+}) => {
+  try {
+    const response = await fetch("https://localhost:7284/api/PaiementDates", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(paiementDates),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur lors de l'ajout des dates de paiement: ${errorText}`);
+    }
 
+    const contentType = response.headers.get("Content-Type");
+    if (response.status === 204 || !contentType || !contentType.includes("application/json")) {
+      return { success: true };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Erreur dans createPaiementDates :", error);
+    throw error;
+  }
+};
 export const getPlansPaiement = async (): Promise<PlanDePaiement[]> => {
   const response = await fetch("https://localhost:7284/api/PlanDePaiement");
   if (!response.ok) {
@@ -33,7 +73,7 @@ export const getPlansPaiement = async (): Promise<PlanDePaiement[]> => {
 
 export const payerEcheance = async (paymentData: {
   planID: number;
-  paiementDateID: number;
+  paiementDateID: number ;
   montantPayee: number;
   dateDePaiement: string;
 }): Promise<void> => {
@@ -56,4 +96,23 @@ export const getEcheanceDetails = async (dateID: number): Promise<PaiementDate> 
     throw new Error("Erreur lors de la récupération des détails de l'échéance");
   }
   return await response.json();
+};
+
+export const lockPlanPaiement = async (planID: number): Promise<void> => {
+  try {
+    const response = await fetch(`https://localhost:7284/api/PlanDePaiement/Lock/${planID}`, {
+      method: "PUT", 
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur lors du verrouillage du plan: ${errorText}`);
+    }
+  } catch (error) {
+    console.error("Erreur dans lockPlanPaiement :", error);
+    throw error;
+  }
 };

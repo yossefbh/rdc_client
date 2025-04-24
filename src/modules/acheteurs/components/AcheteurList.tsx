@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { getAcheteurs } from "@/modules/acheteurs/services/AcheteurService";
 import { Acheteur } from "@/modules/acheteurs/types/Interface";
+import Box from '@mui/material/Box';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
 
 export const AcheteurList = () => {
   const [acheteurs, setAcheteurs] = useState<Acheteur[]>([]);
@@ -21,39 +23,100 @@ export const AcheteurList = () => {
     getAcheteurs().then(setAcheteurs).catch(console.error);
   }, []);
 
-  return (
-    <div>
+  const columns: GridColDef[] = [
+    {
+      field: 'nom',
+      headerName: 'Nom',
+      width: 220,
+      sortable: true,
+      filterable: true,
+      headerAlign: 'center',
+      align: 'center',
+      headerClassName: 'text-lg font-bold',
+    },
+    {
+      field: 'prenom',
+      headerName: 'Prénom',
+      width: 230,
+      sortable: true,
+      filterable: true,
+      headerAlign: 'center',
+      align: 'center',
+      headerClassName: 'text-lg font-bold',
+    },
+    {
+      field: 'adresse',
+      headerName: 'Adresse',
+      width: 270,
+      sortable: true,
+      filterable: true,
+      headerAlign: 'center',
+      align: 'center',
+      headerClassName: 'text-lg font-bold',
+    },
+    {
+      field: 'email',
+      headerName: 'Email',
+      width: 300,
+      sortable: true,
+      filterable: true,
+      headerAlign: 'center',
+      align: 'center',
+      headerClassName: 'text-lg font-bold',
+    },
+    {
+      field: 'telephone',
+      headerName: 'Téléphone',
+      width: 300,
+      sortable: true,
+      filterable: true,
+      headerAlign: 'center',
+      align: 'center',
+      headerClassName: 'text-lg font-bold',
+    },
+  ];
 
-      <button onClick={refreshAcheteurs} className="px-4 py-2 bg-green-700 text-amber-50 rounded hover:bg-green-400 cursor-pointer mb-4">Refresh</button>
-      
-      <table className="w-full bg-white shadow rounded-lg overflow-hidden ">
-        <thead>
-          <tr className="bg-blue-600 text-white">
-            <th className="p-3 text-lg">Nom</th>
-            <th className="p-3 text-lg">Prénom</th>
-            <th className="p-3 text-lg">Adresse</th>
-            <th className="p-3 text-lg">Email</th>
-            <th className="p-3 text-lg">Téléphone</th>
-          </tr>
-        </thead>
-        <tbody>
-          {acheteurs.length === 0 ? (
-            <tr>
-              <td colSpan={5} className="p-4 text-center">Aucun acheteur trouvé.</td>
-            </tr>
-          ) : (
-            acheteurs.map((acheteur) => (
-              <tr key={acheteur.acheteurID} className="text-center border-t hover:bg-gray-50">
-                <td className="p-3">{acheteur.nom}</td>
-                <td className="p-3">{acheteur.prenom}</td>
-                <td className="p-3">{acheteur.adresse}</td>
-                <td className="p-3">{acheteur.email}</td>
-                <td className="p-3">{acheteur.telephone}</td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+  return (
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <button
+          onClick={refreshAcheteurs}
+          className="px-4 py-2 bg-green-700 text-amber-50 rounded hover:bg-green-400 cursor-pointer"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <Box sx={{ height: '88vh', width: '100%' }} className="overflow-visible">
+        <DataGrid
+          rows={acheteurs}
+          columns={columns}
+          getRowId={(row) => row.acheteurID}
+          initialState={{
+            pagination: {
+              paginationModel: {
+                pageSize: 10,
+              },
+            },
+          }}
+          pageSizeOptions={[5, 10, 25]}
+          disableRowSelectionOnClick
+          filterMode="client"
+          sortingMode="client"
+          localeText={{
+            noRowsLabel: "Aucun acheteur trouvé.",
+          }}
+          rowHeight={65}
+          sx={{
+            '& .MuiDataGrid-cell': {
+              overflow: 'visible',
+            },
+            '& .MuiDataGrid-row': {
+              overflow: 'visible',
+            },
+          }}
+        />
+      </Box>
     </div>
   );
 };

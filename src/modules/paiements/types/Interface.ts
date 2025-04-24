@@ -1,4 +1,3 @@
-// src/modules/paiements/types/Interface.ts
 export interface Facture {
   factureID: number;
   numFacture: string;
@@ -25,17 +24,17 @@ export interface PaiementDate {
   montantDue: number;
   isPaid: boolean;
   isLocked: boolean;
-  paiementResponses?: PaiementResponse[] | null; 
+  paiementResponses?: PaiementResponse[] | null;
 }
 
 export interface PlanDePaiement {
   planID: number;
   montantTotal: number;
   nombreDeEcheances: number;
-  montantDeChaqueEcheance: number;
   montantRestant: number;
   creationDate: string;
   planStatus: string;
+  isLocked: boolean;
   factures: Facture[];
   paiementDates: PaiementDate[];
 }
