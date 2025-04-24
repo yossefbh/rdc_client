@@ -4,7 +4,7 @@ import { Facture } from "@/modules/acheteurs/types/Interface";
 import { getAcheteurs } from "@/modules/acheteurs/services/AcheteurService";
 import { Acheteur } from "@/modules/acheteurs/types/Interface";
 import { createPlanPaiement, createPaiementDates } from "@/modules/paiements/services/paiementService";
-import { getLitigeTypes, createLitige, uploadLitigeFiles } from "@/modules/Litige/services/litigeService"; // Ajout de uploadLitigeFiles
+import { getLitigeTypes, createLitige, uploadLitigeFiles } from "@/modules/Litige/services/litigeService";
 import { LitigeType } from "@/modules/Litige/types/Interface";
 import { toast } from "react-toastify";
 import Box from '@mui/material/Box';
@@ -125,7 +125,6 @@ export const FactureList = () => {
           montant: montantEcheance,
         }));
   
-      // Ajuster la dernière échéance pour compenser les arrondis
       const totalSansAjustement = montantEcheance * nombreEcheances;
       const difference = Number((montantTotal - totalSansAjustement).toFixed(3));
       if (difference !== 0) {
@@ -399,10 +398,8 @@ export const FactureList = () => {
         litigeDescription: litigeDescription,
       };
 
-      //lid hnee
       const litigeID = await createLitige(litigeData);
 
-      // Si des fichiers sont présents, les envoyer
       if (litigeFiles.length > 0) {
         await uploadLitigeFiles(litigeID, litigeFiles);
         toast.success("Litige créé et pièces jointes envoyées avec succès !", { autoClose: 3000 });
@@ -484,7 +481,7 @@ export const FactureList = () => {
             params.value.toLowerCase() === "impayee" ? "bg-red-100 text-red-700" :
             params.value.toLowerCase() === "partiellement_payee" ? "bg-yellow-100 text-yellow-800" :
             params.value.toLowerCase() === "en_cours_de_paiement" ? "bg-orange-100 text-orange-400" :
-            "bg-gray-200 text-gray-800"
+            "bg-gray-200 text-black"
           }`}
         >
           {params.value}
@@ -504,7 +501,7 @@ export const FactureList = () => {
         <div className="relative flex justify-center items-center h-full">
           <button
             onClick={(event) => toggleDropdown(params.row.factureID, params.row.status, event)}
-            className="text-gray-600 hover:text-gray-800 text-2xl p-0.5 rounded-full"
+            className="text-black hover:text-gray-800 text-2xl p-0.5 rounded-full"
           >
             ...
           </button>
@@ -516,7 +513,7 @@ export const FactureList = () => {
               <div className="py-1">
                 <button
                   onClick={(event) => handleFaireLitige(params.row.factureID, event)}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
+                  className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
                 >
                   <svg
                     className="inline mr-2 h-4 w-4"
@@ -554,14 +551,14 @@ export const FactureList = () => {
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="border p-1 rounded"
+            className="border p-1 rounded text-black"
           >
-            <option value="all">Filtrer Tous</option>
-            <option value="IMPAYEE">Non payé</option>
-            <option value="PARTIELLEMENT_PAYEE">Partiellement payé</option>
-            <option value="PAYEE">Payé</option>
-            <option value="EN_COURS_DE_PAIEMENT">En cours de paiement</option>
-            <option value="EN_LITIGE">En litige</option>
+            <option value="all" className="text-black">Filtrer Tous</option>
+            <option value="IMPAYEE" className="text-black">Non payé</option>
+            <option value="PARTIELLEMENT_PAYEE" className="text-black">Partiellement payé</option>
+            <option value="PAYEE" className="text-black">Payé</option>
+            <option value="EN_COURS_DE_PAIEMENT" className="text-black">En cours de paiement</option>
+            <option value="EN_LITIGE" className="text-black">En litige</option>
           </select>
         </div>
         <button
@@ -573,7 +570,7 @@ export const FactureList = () => {
       </div>
 
       <div className="bg-blue-100 p-3 rounded-lg mb-4">
-        <p className="text-lg font-semibold text-gray-800">
+        <p className="text-lg font-semibold text-black">
           Montant total à payer : <span className="text-blue-600">{formatMontant(montantTotalSelection)} DT</span>
         </p>
       </div>
@@ -584,11 +581,11 @@ export const FactureList = () => {
           setSelectedFactures([]);
           setMontantTotalSelection(0);
         }}
-        className="border p-2 w-full mb-4 rounded"
+        className="border p-2 w-full mb-4 rounded text-black"
       >
-        <option value="">Tous les acheteurs</option>
+        <option value="" className="text-black">Tous les acheteurs</option>
         {acheteurs.map((acheteur) => (
-          <option key={acheteur.acheteurID} value={acheteur.acheteurID}>
+          <option key={acheteur.acheteurID} value={acheteur.acheteurID} className="text-black">
             {acheteur.nom} {acheteur.prenom}
           </option>
         ))}
@@ -634,7 +631,7 @@ export const FactureList = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full max-h-[95vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full max-h-[95vh] overflow-y-auto text-black">
             <h2 className="text-2xl font-bold mb-6 text-center">Plan de Paiement</h2>
             <div className="mb-4 flex items-center gap-2">
               <label className="whitespace-nowrap">Option :</label>
@@ -651,17 +648,17 @@ export const FactureList = () => {
                   setInitialPayment(0);
                   setLibreEcheances([]);
                 }}
-                className="border p-2 w-auto"
+                className="border p-2 w-auto text-black"
               >
-                <option value="">Choisir une option</option>
-                <option value="mois">Nombre de mois</option>
-                <option value="montant">Montant par échéance</option>
-                <option value="libre">Libre</option>
+                <option value="" className="text-black">Choisir une option</option>
+                <option value="mois" className="text-black">Nombre de mois</option>
+                <option value="montant" className="text-black">Montant par échéance</option>
+                <option value="libre" className="text-black">Libre</option>
               </select>
             </div>
             {optionPaiement === "" && !showInitialPaymentPrompt && !showInitialPaymentInput && !showLibreModal && (
               <div className="mt-4">
-                <p className="text-center text-gray-600">Veuillez choisir une option pour continuer.</p>
+                <p className="text-center">Veuillez choisir une option pour continuer.</p>
               </div>
             )}
             {showInitialPaymentPrompt && !showInitialPaymentInput && !showLibreModal && (
@@ -690,7 +687,7 @@ export const FactureList = () => {
                   min="30"
                   max={montantTotalSelection}
                   step="10.000"
-                  className="border p-2 mb-4 w-full"
+                  className="border p-2 mb-4 w-full text-black"
                   value={initialPayment === 0 ? "" : initialPayment}
                   onChange={(e) => setInitialPayment(Number(e.target.value) || 0)}
                   placeholder="Montant initial"
@@ -729,7 +726,7 @@ export const FactureList = () => {
                 </strong>
                 <input
                   type="number"
-                  className="border p-2 mb-4 w-full"
+                  className="border p-2 mb-4 w-full text-black"
                   value={valeur === 0 ? "" : valeur}
                   onChange={(e) => setValeur(Number(e.target.value) || 0)}
                   placeholder={optionPaiement === "mois" ? "Nombre de mois" : "Montant par échéance"}
@@ -803,7 +800,7 @@ export const FactureList = () => {
                         type="date"
                         value={echeance.date}
                         onChange={(e) => updateLibreEcheance(index, "date", e.target.value)}
-                        className="border p-1 flex-1"
+                        className="border p-1 flex-1 text-black"
                         min={new Date().toISOString().split("T")[0]}
                       />
                       <input
@@ -811,7 +808,7 @@ export const FactureList = () => {
                         value={echeance.montant === 0 ? "" : echeance.montant}
                         onChange={(e) => updateLibreEcheance(index, "montant", Number(e.target.value) || 0)}
                         placeholder="Montant (min 20 DT)"
-                        className="border p-1 flex-1"
+                        className="border p-1 flex-1 text-black"
                       />
                       <button
                         onClick={() => removeLibreEcheance(index)}
@@ -854,18 +851,18 @@ export const FactureList = () => {
 
       {showLitigeModal && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
+          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full text-black">
             <h2 className="text-2xl font-bold mb-6 text-center">Soumettre un Litige</h2>
             <div className="mb-4">
               <label className="block mb-2 font-semibold">Raison du litige</label>
               <select
                 value={litigeTypeId ?? ""}
                 onChange={(e) => setLitigeTypeId(Number(e.target.value) || null)}
-                className="border p-2 w-full rounded"
+                className="border p-2 w-full rounded text-black"
               >
-                <option value="">Sélectionner une raison</option>
+                <option value="" className="text-black">Sélectionner une raison</option>
                 {litigeTypes.map((type) => (
-                  <option key={type.litigeTypeID} value={type.litigeTypeID}>
+                  <option key={type.litigeTypeID} value={type.litigeTypeID} className="text-black">
                     {type.litigeTypeName}
                   </option>
                 ))}
@@ -876,7 +873,7 @@ export const FactureList = () => {
               <textarea
                 value={litigeDescription}
                 onChange={(e) => setLitigeDescription(e.target.value)}
-                className="border p-2 w-full rounded"
+                className="border p-2 w-full rounded text-black"
                 rows={4}
                 placeholder="Décrivez le problème..."
               />
@@ -887,12 +884,12 @@ export const FactureList = () => {
                 type="file"
                 multiple
                 onChange={handleFileChange}
-                className="border p-2 w-full rounded"
+                className="border p-2 w-full rounded text-black"
                 accept=".pdf,.jpg,.jpeg,.png"
               />
               {litigeFiles.length > 0 && (
                 <div className="mt-2">
-                  <p className="text-sm text-gray-600">Fichiers sélectionnés :</p>
+                  <p className="text-sm">Fichiers sélectionnés :</p>
                   <ul className="list-disc list-inside">
                     {litigeFiles.map((file, index) => (
                       <li key={index} className="text-sm flex items-center justify-between">
@@ -935,4 +932,4 @@ export const FactureList = () => {
       )}
     </div>
   );
-};  
+};

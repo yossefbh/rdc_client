@@ -263,7 +263,7 @@ export const LitigeList = () => {
       headerClassName: 'text-lg font-bold',
       renderCell: (params) => {
         const index = validLitiges.findIndex((litige) => litige.litigeID === params.row.litigeID);
-        return <span>{index + 1}</span>;
+        return <span className="text-black">{index + 1}</span>;
       },
     },
     {
@@ -274,14 +274,14 @@ export const LitigeList = () => {
       headerAlign: 'center',
       align: 'center',
       headerClassName: 'text-lg font-bold',
-      renderCell: (params) => <span>{params.row?.facture?.numFacture ?? "N/A"}</span>,
+      renderCell: (params) => <span className="text-black">{params.row?.facture?.numFacture ?? "N/A"}</span>,
     },
     {
       field: 'litigeTypeName',
       headerName: 'Type de Litige',
       width: 315,
       sortable: true,
-      renderCell: (params) => <span>{params.row?.type?.litigeTypeName ?? "N/A"}</span>,
+      renderCell: (params) => <span className="text-black">{params.row?.type?.litigeTypeName ?? "N/A"}</span>,
       headerAlign: 'center',
       align: 'center',
       headerClassName: 'text-lg font-bold',
@@ -303,7 +303,7 @@ export const LitigeList = () => {
               ? "bg-green-100 text-green-800"
               : params.value === "REJETE"
               ? "bg-red-100 text-red-800"
-              : "bg-gray-200 text-gray-800"
+              : "bg-gray-200 text-black"
           }`}
         >
           {params.value ?? "N/A"}
@@ -322,7 +322,7 @@ export const LitigeList = () => {
         <div className="relative flex justify-center items-center h-full">
           <button
             onClick={(event) => toggleDropdown(params.row.litigeID, event)}
-            className="text-gray-600 hover:text-gray-800 text-2xl p-0.5 rounded-full"
+            className="text-black hover:text-gray-800 text-2xl p-0.5 rounded-full"
           >
             ...
           </button>
@@ -334,7 +334,7 @@ export const LitigeList = () => {
               <div className="py-1">
                 <button
                   onClick={(event) => handleShowDetails(params.row, event)}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
+                  className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
                 >
                   <svg
                     className="inline mr-2 h-4 w-4"
@@ -355,7 +355,7 @@ export const LitigeList = () => {
                   onClick={(event) => handleShowResolution(params.row, event)}
                   className={`block w-full text-left px-4 py-2 text-sm ${
                     params.row.litigeStatus === "EN_COURS"
-                      ? "text-gray-700 hover:bg-blue-50"
+                      ? "text-black hover:bg-blue-50"
                       : "text-gray-400 cursor-not-allowed"
                   }`}
                   disabled={params.row.litigeStatus !== "EN_COURS"}
@@ -397,18 +397,18 @@ export const LitigeList = () => {
           onChange={(e) => {
             setSelectedAcheteurId(e.target.value ? Number(e.target.value) : null);
           }}
-          className="border p-2 rounded"
+          className="border p-2 rounded text-black"
         >
-          <option value="">Tous les acheteurs</option>
+          <option value="" className="text-black">Tous les acheteurs</option>
           {acheteurs.map((acheteur) => (
-            <option key={acheteur.acheteurID} value={acheteur.acheteurID}>
+            <option key={acheteur.acheteurID} value={acheteur.acheteurID} className="text-black">
               {acheteur.nom} {acheteur.prenom}
             </option>
           ))}
         </select>
       </div>
 
-      {loading && <p className="text-center text-gray-600">Chargement des litiges...</p>}
+      {loading && <p className="text-center text-black">Chargement des litiges...</p>}
       {error && <p className="text-red-500 text-center">{error}</p>}
 
       <Box sx={{ height: "calc(100vh - 120px)", width: "100%" }} className="overflow-visible">
@@ -450,7 +450,7 @@ export const LitigeList = () => {
       {/* Modal pour afficher les détails du litige */}
       {showDetailsModal && selectedLitige && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-10 rounded shadow-lg max-w-4xl w-full">
+          <div className="bg-white p-10 rounded shadow-lg max-w-4xl w-full text-black">
             <h2 className="text-3xl font-bold mb-8 text-center">Détails du Litige</h2>
             <div className="mb-10">
               <h4 className="font-semibold text-xl mb-4 border-b pb-3">Informations du Litige</h4>
@@ -477,7 +477,7 @@ export const LitigeList = () => {
                       <td className="p-4 text-center">
                         <button
                           onClick={() => setShowDescriptionModal(true)}
-                          className="flex items-center justify-center mx-auto px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200"
+                          className="flex items-center justify-center mx-auto px-3 py-1 bg-gray-100 text-black rounded-full text-sm hover:bg-gray-200"
                         >
                           <svg
                             className="w-4 h-4 mr-2"
@@ -511,14 +511,14 @@ export const LitigeList = () => {
             <div className="mb-10">
               <h4 className="font-semibold text-xl mb-4 border-b pb-3">Justificatifs utilisés</h4>
               {loadingJustificatifs ? (
-                <p className="text-center text-gray-600">Chargement des justificatifs...</p>
+                <p className="text-center text-black">Chargement des justificatifs...</p>
               ) : justificatifs.length === 0 ? (
-                <p className="text-center text-gray-600">Aucun justificatif trouvé.</p>
+                <p className="text-center text-black">Aucun justificatif trouvé.</p>
               ) : (
                 <ul className="space-y-2">
                   {justificatifs.map((justificatif, index) => (
                     <li key={index} className="flex items-center justify-between p-2 border rounded">
-                      <span>{justificatif.nomFichier}</span>
+                      <span className="text-black">{justificatif.nomFichier}</span>
                       <button
                         onClick={() => handleDownloadJustificatif(justificatif.downloadUrl, justificatif.nomFichier)}
                         className="flex items-center px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -564,10 +564,10 @@ export const LitigeList = () => {
       {/* Modal pour afficher la description */}
       {showDescriptionModal && selectedLitige && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-[60]">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full relative">
+          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full relative text-black">
             <button
               onClick={() => setShowDescriptionModal(false)}
-              className="absolute top-4 right-4 text-gray-600 hover:text-gray-800"
+              className="absolute top-4 right-4 text-black hover:text-gray-800"
             >
               <svg
                 className="w-6 h-6"
@@ -585,7 +585,7 @@ export const LitigeList = () => {
               </svg>
             </button>
             <h3 className="text-2xl font-bold mb-4 text-center">Description du Litige</h3>
-            <p className="text-gray-700 mb-6 text-center">
+            <p className="mb-6 text-center">
               {selectedLitige.litigeDescription ?? "Aucune description disponible."}
             </p>
           </div>
@@ -595,7 +595,7 @@ export const LitigeList = () => {
       {/* Modal pour la résolution du litige */}
       {showResolutionModal && selectedLitige && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-[60]">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full relative">
+          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full relative text-black">
             <button
               onClick={() => {
                 setShowResolutionModal(false);
@@ -603,7 +603,7 @@ export const LitigeList = () => {
                 setIsJustified(null);
                 setCorrectedData({ correctedMontantTotal: "", correctedAmountDue: "" });
               }}
-              className="absolute top-4 right-4 text-gray-600 hover:text-gray-800"
+              className="absolute top-4 right-4 text-black hover:text-gray-800"
             >
               <svg
                 className="w-6 h-6"
@@ -667,7 +667,7 @@ export const LitigeList = () => {
                                   correctedMontantTotal: e.target.value,
                                 })
                               }
-                              className="border p-1 w-full text-center rounded"
+                              className="border p-1 w-full text-center rounded text-black"
                               min="0"
                               step="1"
                               placeholder="Entrez le montant"
@@ -683,7 +683,7 @@ export const LitigeList = () => {
                                   correctedAmountDue: e.target.value,
                                 })
                               }
-                              className="border p-1 w-full text-center rounded"
+                              className="border p-1 w-full text-center rounded text-black"
                               min="0"
                               step="0.01"
                               placeholder="Entrez le montant"
@@ -736,14 +736,14 @@ export const LitigeList = () => {
       {/* Modal pour afficher les types de litiges */}
       {showLitigeTypesModal && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto text-black">
             <h2 className="text-2xl font-bold mb-4 text-center">Liste des types de litiges</h2>
-            {loading && <p>Chargement des types de litiges...</p>}
+            {loading && <p className="text-center">Chargement des types de litiges...</p>}
             {error && <p className="text-red-500">{error}</p>}
             {!loading && !error && (
               <>
                 {litigeTypes.length === 0 ? (
-                  <p className="text-center text-gray-600">Aucun type de litige trouvé.</p>
+                  <p className="text-center">Aucun type de litige trouvé.</p>
                 ) : (
                   <ul className="space-y-4">
                     {litigeTypes.map((litigeType, index) => (
@@ -763,7 +763,7 @@ export const LitigeList = () => {
                                 })
                               }
                               placeholder="Nom du type de litige"
-                              className="border p-2 mb-2 w-full rounded"
+                              className="border p-2 mb-2 w-full rounded text-black"
                             />
                             <textarea
                               value={editingLitigeType.litigeTypeDescription || ""}
@@ -774,7 +774,7 @@ export const LitigeList = () => {
                                 })
                               }
                               placeholder="Description"
-                              className="border p-2 mb-2 w-full rounded"
+                              className="border p-2 mb-2 w-full rounded text-black"
                               rows={3}
                             />
                             <div className="flex gap-2">
@@ -846,7 +846,7 @@ export const LitigeList = () => {
       {/* Modal pour créer un nouveau type de litige */}
       {showCreateLitigeTypeModal && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
+          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full text-black">
             <h2 className="text-2xl font-bold mb-6 text-center">Créer un type de litige</h2>
             <div className="mb-4">
               <label className="block mb-2 font-semibold">Nom du type de litige</label>
@@ -856,7 +856,7 @@ export const LitigeList = () => {
                 onChange={(e) =>
                   setNewLitigeType({ ...newLitigeType, litigeTypeName: e.target.value })
                 }
-                className="border p-2 w-full rounded"
+                className="border p-2 w-full rounded text-black"
                 placeholder="Entrez le nom du type de litige"
               />
             </div>
@@ -867,7 +867,7 @@ export const LitigeList = () => {
                 onChange={(e) =>
                   setNewLitigeType({ ...newLitigeType, litigeTypeDescription: e.target.value })
                 }
-                className="border p-2 w-full rounded"
+                className="border p-2 w-full rounded text-black"
                 rows={4}
                 placeholder="Entrez une description..."
               />

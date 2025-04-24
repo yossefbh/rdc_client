@@ -600,7 +600,7 @@ export const PaiementList = () => {
         <div className="relative flex justify-center items-center h-full">
           <button
             onClick={(event) => toggleMenu(params.row.planID, event)}
-            className="text-gray-600 hover:text-gray-800 text-2xl p-0.5 rounded-full"
+            className="text-black hover:text-gray-800 text-2xl p-0.5 rounded-full"
           >
             ...
           </button>
@@ -615,7 +615,7 @@ export const PaiementList = () => {
                     setSelectedPlan(params.row);
                     setOpenMenuId(null);
                   }}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
+                  className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
                 >
                   <svg
                     className="inline mr-2 h-4 w-4"
@@ -651,7 +651,7 @@ export const PaiementList = () => {
                     }, 0);
                     setOpenMenuId(null);
                   }}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
+                  className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
                 >
                   <svg
                     className="inline mr-2 h-4 w-4"
@@ -671,7 +671,7 @@ export const PaiementList = () => {
                 {params.row.planStatus === "ANNULE" && (
                   <button
                     onClick={() => handleAjouterNouveauPlan(params.row)}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
+                    className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
                   >
                     <svg
                       className="inline mr-2 h-4 w-4"
@@ -731,21 +731,21 @@ export const PaiementList = () => {
 
       {selectedPlan && !showPaymentModal && !showNewPlanModal && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white w-3/4 p-6 rounded-lg shadow-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white w-3/4 p-6 rounded-lg shadow-lg max-h-[90vh] overflow-y-auto text-black">
             <div className="text-center mb-6">
-              <h3 className="text-lg font-bold">Détails du Plan {selectedPlan.planID}</h3>
+              <h3 className="text-2xl font-bold">Détails du Plan {selectedPlan.planID}</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                 <h4 className="font-semibold text-blue-800 mb-2">Montant total des factures</h4>
-                <p className="text-lg font-bold">
+                <p className="text-xl font-bold">
                   {formatMontant(selectedPlan.factures.reduce((sum, f) => sum + f.montantTotal, 0))} DT
                 </p>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                 <h4 className="font-semibold text-blue-800 mb-2">Montant total à payer</h4>
-                <p className="text-lg font-bold">
+                <p className="text-xl font-bold">
                   {formatMontant(selectedPlan.factures.reduce((sum, f) => sum + f.montantRestantDue, 0))} DT
                 </p>
               </div>
@@ -862,7 +862,7 @@ export const PaiementList = () => {
                                 <div className="py-1">
                                   <button
                                     onClick={() => showPaymentHistory(paiement.dateID)}
-                                    className="flex items-center w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-blue-50"
+                                    className="flex items-center w-full px-4 py-2 text-left text-sm text-black hover:bg-blue-50"
                                   >
                                     <svg
                                       className="mr-2 h-4 w-4"
@@ -905,7 +905,7 @@ export const PaiementList = () => {
 
       {showPaymentModal && selectedPlan && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white w-3/4 p-6 rounded-lg shadow-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white w-3/4 p-6 rounded-lg shadow-lg max-h-[90vh] overflow-y-auto text-black">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold border-b pb-2">
                 Paiement - Plan {selectedPlan.planID}
@@ -990,10 +990,10 @@ export const PaiementList = () => {
 
       {showAmountModal && selectedEcheance && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full text-black">
             <h3 className="text-xl font-bold mb-4">Montant à payer</h3>
             <div className="mb-4">
-              <label className="block text-gray-700 mb-2">
+              <label className="block mb-2">
                 Montant restant: {formatMontant(selectedEcheance.montantDue)} DT
               </label>
               <input
@@ -1017,7 +1017,7 @@ export const PaiementList = () => {
                 className="w-full p-2 border rounded mt-2"
                 placeholder="Saisir le montant à payer"
               />
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm mt-1">
                 Max montant à saisir : {formatMontant(selectedEcheance.montantDue)} DT
               </p>
             </div>
@@ -1042,7 +1042,7 @@ export const PaiementList = () => {
 
       {showConfirmModal && selectedEcheance && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full text-black">
             <h3 className="text-xl font-bold mb-4">Confirmation du paiement</h3>
             <p className="mb-2">Vous allez payer: {formatMontant(parseFloat(paymentAmount || "0"))} DT</p>
             <p className="mb-4">sur un montant dû de: {formatMontant(selectedEcheance.montantDue)} DT</p>
@@ -1069,9 +1069,9 @@ export const PaiementList = () => {
 
       {showHistoryModal && selectedEcheanceDetails && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto text-black">
             <div className="text-center mb-6 border-b border-gray-200 pb-3">
-              <h3 className="text-xl font-bold text-gray-800">
+              <h3 className="text-xl font-bold">
                 Échéance {selectedEcheanceDetails.echeanceDate}
               </h3>
             </div>
@@ -1110,7 +1110,7 @@ export const PaiementList = () => {
                 </tbody>
               </table>
             ) : (
-              <p className="text-center text-gray-500">
+              <p className="text-center">
                 Aucun paiement enregistré pour cette échéance.
               </p>
             )}
@@ -1131,10 +1131,10 @@ export const PaiementList = () => {
 
       {showNewPlanModal && selectedPlan && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto text-black">
             <h2 className="text-2xl font-bold mb-6 text-center">Nouveau Plan de Paiement</h2>
             <div className="mb-4">
-              <label className="block text-gray-700 mb-2">
+              <label className="block mb-2">
                 Montant total : {formatMontant(selectedPlan.montantRestant)} DT
               </label>
             </div>
@@ -1164,7 +1164,7 @@ export const PaiementList = () => {
             </div>
             {optionPaiement === "" && !showInitialPaymentPrompt && !showInitialPaymentInput && !showLibreModal && (
               <div className="mt-4">
-                <p className="text-center text-gray-600">Veuillez choisir une option pour continuer.</p>
+                <p className="text-center">Veuillez choisir une option pour continuer.</p>
               </div>
             )}
             {showInitialPaymentPrompt && !showInitialPaymentInput && !showLibreModal && (
