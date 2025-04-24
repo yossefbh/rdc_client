@@ -580,7 +580,7 @@ export const PaiementList = () => {
                 ? "bg-yellow-100 text-yellow-800"
                 : params.value.toLowerCase() === "annule"
                   ? "bg-red-100 text-red-800"
-                  : "bg-black text-white" // Remplace bg-gray-200 text-gray-800 par bg-black text-white
+                  : "bg-gray-200 text-gray-800"
             }`}
         >
           {params.value}
@@ -600,7 +600,7 @@ export const PaiementList = () => {
         <div className="relative flex justify-center items-center h-full">
           <button
             onClick={(event) => toggleMenu(params.row.planID, event)}
-            className="text-black hover:text-gray-800 text-2xl p-0.5 rounded-full" // Remplace text-gray-600 par text-black
+            className="text-gray-600 hover:text-gray-800 text-2xl p-0.5 rounded-full"
           >
             ...
           </button>
@@ -615,7 +615,7 @@ export const PaiementList = () => {
                     setSelectedPlan(params.row);
                     setOpenMenuId(null);
                   }}
-                  className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50" // Remplace text-gray-700 par text-black
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
                 >
                   <svg
                     className="inline mr-2 h-4 w-4"
@@ -651,7 +651,7 @@ export const PaiementList = () => {
                     }, 0);
                     setOpenMenuId(null);
                   }}
-                  className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50" // Remplace text-gray-700 par text-black
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
                 >
                   <svg
                     className="inline mr-2 h-4 w-4"
@@ -671,7 +671,7 @@ export const PaiementList = () => {
                 {params.row.planStatus === "ANNULE" && (
                   <button
                     onClick={() => handleAjouterNouveauPlan(params.row)}
-                    className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50" // Remplace text-gray-700 par text-black
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
                   >
                     <svg
                       className="inline mr-2 h-4 w-4"
@@ -733,19 +733,19 @@ export const PaiementList = () => {
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
           <div className="bg-white w-3/4 p-6 rounded-lg shadow-lg max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold">Détails du Plan {selectedPlan.planID}</h3>
+              <h3 className="text-lg font-bold">Détails du Plan {selectedPlan.planID}</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                 <h4 className="font-semibold text-blue-800 mb-2">Montant total des factures</h4>
-                <p className="text-xl font-bold">
+                <p className="text-lg font-bold">
                   {formatMontant(selectedPlan.factures.reduce((sum, f) => sum + f.montantTotal, 0))} DT
                 </p>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                 <h4 className="font-semibold text-blue-800 mb-2">Montant total à payer</h4>
-                <p className="text-xl font-bold">
+                <p className="text-lg font-bold">
                   {formatMontant(selectedPlan.factures.reduce((sum, f) => sum + f.montantRestantDue, 0))} DT
                 </p>
               </div>
@@ -770,7 +770,7 @@ export const PaiementList = () => {
                   </thead>
                   <tbody>
                     {selectedPlan.factures.map((facture) => (
-                      <tr key={facture.factureID} className="border-t hover:bg-neutral-100"> {/* Remplace hover:bg-gray-50 par hover:bg-neutral-100 */}
+                      <tr key={facture.factureID} className="border-t hover:bg-gray-50">
                         <td className="pl-6 pr-3 py-3 whitespace-nowrap">{facture.numFacture}</td>
                         <td className="pl-6 pr-3 py-3 whitespace-nowrap">{facture.dateEcheance}</td>
                         <td className="px-5 py-3 text-right font-medium">{formatMontant(facture.montantTotal)} DT</td>
@@ -811,7 +811,7 @@ export const PaiementList = () => {
                   </thead>
                   <tbody>
                     {selectedPlan.paiementDates.map((paiement) => (
-                      <tr key={paiement.dateID} className="border-t hover:bg-neutral-100"> {/* Remplace hover:bg-gray-50 par hover:bg-neutral-100 */}
+                      <tr key={paiement.dateID} className="border-t hover:bg-gray-50">
                         <td className="pl-6 pr-3 py-3 whitespace-nowrap">{paiement.echeanceDate}</td>
                         <td className="p-3 text-center">{formatMontant(paiement.montantDeEcheance)} DT</td>
                         <td className="p-3 text-center">{formatMontant(paiement.montantDue)} DT</td>
@@ -835,7 +835,7 @@ export const PaiementList = () => {
                           <div className="relative inline-block">
                             <button
                               onClick={() => toggleHistoryMenu(paiement.dateID)}
-                              className="p-1 rounded-full hover:bg-neutral-200" // Remplace hover:bg-gray-200 par hover:bg-neutral-200
+                              className="p-1 rounded-full hover:bg-gray-200"
                               aria-label="Menu historique"
                             >
                               <svg
@@ -856,13 +856,13 @@ export const PaiementList = () => {
 
                             {openHistoryMenuId === paiement.dateID && (
                               <div
-                                className="absolute right-0 z-50 w-32 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 top-full mt-1" // Remplace ring-gray par ring-black
+                                className="absolute right-0 z-50 w-32 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 top-full mt-1"
                                 style={{ visibility: "visible", overflow: "visible" }}
                               >
                                 <div className="py-1">
                                   <button
                                     onClick={() => showPaymentHistory(paiement.dateID)}
-                                    className="flex items-center w-full px-4 py-2 text-left text-sm text-black hover:bg-blue-50" // Remplace text-gray-900 par text-black
+                                    className="flex items-center w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-blue-50"
                                   >
                                     <svg
                                       className="mr-2 h-4 w-4"
@@ -949,25 +949,23 @@ export const PaiementList = () => {
                           : "À payer"}
                     </td>
                     <td className="p-2">
-                      <button
-                        onClick={() => {
-                          if (selectedPlan.planStatus === "TERMINE") {
-                            toast.error(
-                              "Ce plan est déjà terminé et ne peut plus être payé."
-                            );
-                            return;
-                          }
-                          preparePayment(echeance);
-                        }}
-                        disabled={isProcessingPayment || echeance.isPaid}
-                        className={`px-3 py-1 rounded cursor-pointer ${
-                          isProcessingPayment || echeance.isPaid
-                            ? "bg-black text-white cursor-not-allowed" // Remplace le style par défaut gris par bg-black
-                            : "bg-blue-500 text-white hover:bg-blue-600"
-                        }`}
-                      >
-                        Payer
-                      </button>
+                      {!echeance.isPaid && (
+                        <button
+                          onClick={() => {
+                            if (selectedPlan.planStatus === "TERMINE") {
+                              toast.error(
+                                "Ce plan est déjà terminé et ne peut plus être payé."
+                              );
+                              return;
+                            }
+                            preparePayment(echeance);
+                          }}
+                          disabled={isProcessingPayment || echeance.isPaid}
+                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
+                        >
+                          Payer
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -995,7 +993,7 @@ export const PaiementList = () => {
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
             <h3 className="text-xl font-bold mb-4">Montant à payer</h3>
             <div className="mb-4">
-              <label className="block text-black mb-2"> {/* Remplace text-gray-700 par text-black */}
+              <label className="block text-gray-700 mb-2">
                 Montant restant: {formatMontant(selectedEcheance.montantDue)} DT
               </label>
               <input
@@ -1019,7 +1017,7 @@ export const PaiementList = () => {
                 className="w-full p-2 border rounded mt-2"
                 placeholder="Saisir le montant à payer"
               />
-              <p className="text-sm text-black mt-1"> {/* Remplace text-gray-500 par text-black */}
+              <p className="text-sm text-gray-500 mt-1">
                 Max montant à saisir : {formatMontant(selectedEcheance.montantDue)} DT
               </p>
             </div>
@@ -1027,7 +1025,7 @@ export const PaiementList = () => {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowAmountModal(false)}
-                className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 cursor-pointer" // Remplace bg-gray-500 hover:bg-gray-600 par bg-black hover:bg-gray-800
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 cursor-pointer"
               >
                 Annuler
               </button>
@@ -1052,7 +1050,7 @@ export const PaiementList = () => {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowConfirmModal(false)}
-                className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 cursor-pointer" // Remplace bg-gray-500 hover:bg-gray-600 par bg-black hover:bg-gray-800
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 cursor-pointer"
               >
                 Annuler
               </button>
@@ -1072,8 +1070,8 @@ export const PaiementList = () => {
       {showHistoryModal && selectedEcheanceDetails && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
-            <div className="text-center mb-6 border-b border-neutral-200 pb-3"> {/* Remplace border-gray-200 par border-neutral-200 */}
-              <h3 className="text-xl font-bold text-black"> {/* Remplace text-gray-800 par text-black */}
+            <div className="text-center mb-6 border-b border-gray-200 pb-3">
+              <h3 className="text-xl font-bold text-gray-800">
                 Échéance {selectedEcheanceDetails.echeanceDate}
               </h3>
             </div>
@@ -1098,7 +1096,7 @@ export const PaiementList = () => {
                 </thead>
                 <tbody>
                   {selectedEcheanceDetails.paiementResponses.map((paiement) => (
-                    <tr key={paiement.paiementID} className="border-t hover:bg-neutral-100"> {/* Remplace hover:bg-gray-50 par hover:bg-neutral-100 */}
+                    <tr key={paiement.paiementID} className="border-t hover:bg-gray-50">
                       <td className="px-18 p-2">
                         {new Date(paiement.dateDePaiement).toLocaleDateString("fr-FR", {
                           day: "2-digit",
@@ -1112,7 +1110,7 @@ export const PaiementList = () => {
                 </tbody>
               </table>
             ) : (
-              <p className="text-center text-black"> {/* Remplace text-gray-500 par text-black */}
+              <p className="text-center text-gray-500">
                 Aucun paiement enregistré pour cette échéance.
               </p>
             )}
@@ -1136,7 +1134,7 @@ export const PaiementList = () => {
           <div className="bg-white p-6 rounded shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-6 text-center">Nouveau Plan de Paiement</h2>
             <div className="mb-4">
-              <label className="block text-black mb-2"> {/* Remplace text-gray-700 par text-black */}
+              <label className="block text-gray-700 mb-2">
                 Montant total : {formatMontant(selectedPlan.montantRestant)} DT
               </label>
             </div>
@@ -1166,9 +1164,7 @@ export const PaiementList = () => {
             </div>
             {optionPaiement === "" && !showInitialPaymentPrompt && !showInitialPaymentInput && !showLibreModal && (
               <div className="mt-4">
-                <p className="text-center text-black"> {/* Remplace text-gray-600 par text-black */}
-                  Veuillez choisir une option pour continuer.
-                </p>
+                <p className="text-center text-gray-600">Veuillez choisir une option pour continuer.</p>
               </div>
             )}
             {showInitialPaymentPrompt && !showInitialPaymentInput && !showLibreModal && (
@@ -1183,7 +1179,7 @@ export const PaiementList = () => {
                   </button>
                   <button
                     onClick={() => handleInitialPayment(false)}
-                    className="p-2 bg-black text-white rounded flex-1" // Remplace bg-gray-500 par bg-black
+                    className="p-2 bg-gray-500 text-white rounded flex-1"
                   >
                     Non
                   </button>
@@ -1196,9 +1192,7 @@ export const PaiementList = () => {
                   type="number"
                   min="30"
                   max={selectedPlan.montantRestant}
-                  step="10                
-                
-                .000"
+                  step="10.000"
                   className="border p-2 mb-4 w-full"
                   value={initialPayment === 0 ? "" : initialPayment}
                   onChange={(e) => setInitialPayment(Number(e.target.value) || 0)}
@@ -1251,7 +1245,7 @@ export const PaiementList = () => {
                 </button>
                 {resultat && (
                   <div className="mt-4">
-                    <div className="bg-neutral-100 p-3 rounded mb-3"> {/* Remplace bg-gray-50 par bg-neutral-100 */}
+                    <div className="bg-gray-50 p-3 rounded mb-3">
                       <p><strong>Nombre d'échéances :</strong> {resultat.nombreEcheances}</p>
                       <p><strong>Montant par échéance :</strong> {formatMontant(resultat.montantEcheance)} DT</p>
                     </div>
@@ -1279,7 +1273,7 @@ export const PaiementList = () => {
                     <button
                       onClick={handleValidation}
                       disabled={isSubmitting}
-                      className={`p-2 rounded w-full ${isSubmitting ? 'bg-black text-white' : 'bg-green-600 text-white'}`} // Remplace bg-gray-400 par bg-black
+                      className={`p-2 rounded w-full ${isSubmitting ? 'bg-gray-400' : 'bg-green-600 text-white'}`}
                     >
                       {isSubmitting ? "Validation en cours..." : "Valider"}
                     </button>
@@ -1334,7 +1328,7 @@ export const PaiementList = () => {
                 <button
                   onClick={validateLibrePlan}
                   disabled={isSubmitting}
-                  className={`p-2 rounded w-full ${isSubmitting ? 'bg-black text-white' : 'bg-green-600 text-white'}`} // Remplace bg-gray-400 par bg-black
+                  className={`p-2 rounded w-full ${isSubmitting ? 'bg-gray-400' : 'bg-green-600 text-white'}`}
                 >
                   {isSubmitting ? "Validation en cours..." : "Valider"}
                 </button>
