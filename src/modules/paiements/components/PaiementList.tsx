@@ -478,7 +478,6 @@ export const PaiementList = () => {
       const todayDate = new Date(today);
       todayDate.setHours(0, 0, 0, 0);
 
-      // Vérification que la date est future
       if (currentDate <= todayDate) {
         toast.error(`La date de l'échéance ${i + 1} doit être future.`, { autoClose: 3000 });
         return;
@@ -946,10 +945,10 @@ export const PaiementList = () => {
                         ? "Payé"
                         : echeance.montantPayee > 0
                           ? "Partiel"
-                          : "À payer"}
+                          : "Non Payé"}
                     </td>
                     <td className="p-2">
-                      {!echeance.isPaid && (
+                      {!echeance.isPaid && !echeance.isLocked && (
                         <button
                           onClick={() => {
                             if (selectedPlan.planStatus === "TERMINE") {
@@ -960,7 +959,7 @@ export const PaiementList = () => {
                             }
                             preparePayment(echeance);
                           }}
-                          disabled={isProcessingPayment || echeance.isLocked}
+                          disabled={isProcessingPayment}
                           className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
                         >
                           Payer
@@ -988,10 +987,9 @@ export const PaiementList = () => {
         </div>
       )}
 
-      {showAmountModal && selectedEcheance && (
+{showAmountModal && selectedEcheance && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full text-black">
-            <h3 className="text-xl font-bold mb-4">Montant à payer</h3>
             <div className="mb-4">
               <label className="block mb-2">
                 Montant restant: {formatMontant(selectedEcheance.montantDue)} DT
