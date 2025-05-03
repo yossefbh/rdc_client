@@ -4,6 +4,7 @@ export const createPlanPaiement = async (planData: {
   montantTotal: number;
   nombreDeEcheances: number;
   factureIDs: number[];
+  hasAdvance: boolean;
 }) => {
   try {
     const response = await fetch("https://localhost:7284/api/PlanDePaiement", {
@@ -21,13 +22,14 @@ export const createPlanPaiement = async (planData: {
 
     const result = await response.json();
     if (typeof result === "number") {
-      return { planID: result }; 
+      return { planID: result };
     }
-    return result; 
+    return result;
   } catch (error) {
     throw error;
   }
 };
+
 export const createPaiementDates = async (paiementDates: {
   paiementDates: {
     planID: number;
@@ -63,6 +65,7 @@ export const createPaiementDates = async (paiementDates: {
     throw error;
   }
 };
+
 export const getPlansPaiement = async (): Promise<PlanDePaiement[]> => {
   const response = await fetch("https://localhost:7284/api/PlanDePaiement");
   if (!response.ok) {
@@ -73,10 +76,10 @@ export const getPlansPaiement = async (): Promise<PlanDePaiement[]> => {
 
 export const payerEcheance = async (paymentData: {
   planID: number;
-  paiementDateID: number ;
+  paiementDateID: number;
   montantPayee: number;
   dateDePaiement: string;
-}): Promise<void> => {
+}): Promise<number | void> => {
   const response = await fetch("https://localhost:7284/api/Paiement", {
     method: "POST",
     headers: {
@@ -87,6 +90,14 @@ export const payerEcheance = async (paymentData: {
 
   if (!response.ok) {
     throw new Error("Erreur lors du paiement");
+  }
+
+  const contentType = response.headers.get("Content-Type");
+  if (contentType && contentType.includes("application/json")) {
+    const result = await response.json();
+    if (typeof result === "number") {
+      return result; 
+    }
   }
 };
 
@@ -101,7 +112,7 @@ export const getEcheanceDetails = async (dateID: number): Promise<PaiementDate> 
 export const lockPlanPaiement = async (planID: number): Promise<void> => {
   try {
     const response = await fetch(`https://localhost:7284/api/PlanDePaiement/Lock/${planID}`, {
-      method: "PUT", 
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
@@ -113,6 +124,48 @@ export const lockPlanPaiement = async (planID: number): Promise<void> => {
     }
   } catch (error) {
     console.error("Erreur dans lockPlanPaiement :", error);
+    throw error;
+  }
+};
+
+export const activatePlanPaiement = async (planID: number): Promise<void> => {
+  try {
+    const response = await fetch(`https://localhost:7284/api/PlanDePaiement/Activate/${planID}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur lors de l'activation du plan: ${errorText}`);
+    }
+  } catch (error) {
+    console.error("Erreur dans activatePlanPaiement :", error);
+    throw error;
+  }
+};
+
+export const verifySignature = async (file: File): Promise<boolean> => {
+  try {
+    const formData = new FormData();
+    formData.append("pdfFiles", file);
+
+    const response = await fetch("https://localhost:7284/api/PlanDePaiement/VerifySignature", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur lors de la vérification de la signature: ${errorText}`);
+    }
+
+    const result = await response.json();
+    return result; 
+  } catch (error) {
+    console.error("Erreur dans verifySignature :", error);
     throw error;
   }
 };

@@ -37,7 +37,7 @@ export const AcheteurList = () => {
     {
       field: 'prenom',
       headerName: 'Prénom',
-      width: 230,
+      width: 220,
       sortable: true,
       filterable: true,
       headerAlign: 'center',
@@ -67,7 +67,7 @@ export const AcheteurList = () => {
     {
       field: 'telephone',
       headerName: 'Téléphone',
-      width: 300,
+      width: 290,
       sortable: true,
       filterable: true,
       headerAlign: 'center',

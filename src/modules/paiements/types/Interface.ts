@@ -1,3 +1,16 @@
+export interface PlanDePaiement {
+  planID: number;
+  montantTotal: number;
+  nombreDeEcheances: number;
+  montantRestant: number;
+  creationDate: string;
+  planStatus: "EN_ATTENTE" | "EN_COURS" | "TERMINE" | "ANNULE";
+  isLocked: boolean;
+  hasAdvance: boolean; 
+  factures: Facture[];
+  paiementDates: PaiementDate[];
+}
+
 export interface Facture {
   factureID: number;
   numFacture: string;
@@ -5,14 +18,7 @@ export interface Facture {
   montantTotal: number;
   montantRestantDue: number;
   acheteurID: number;
-  status: string;
-}
-
-export interface PaiementResponse {
-  paiementID: number;
-  paiementDateID: number;
-  montantPayee: number;
-  dateDePaiement: string;
+  status: "PAYEE" | "IMPAYEE" | "EN_COURS_DE_PAIEMENT";
 }
 
 export interface PaiementDate {
@@ -24,17 +30,12 @@ export interface PaiementDate {
   montantDue: number;
   isPaid: boolean;
   isLocked: boolean;
-  paiementResponses?: PaiementResponse[] | null;
+  paiementResponses: PaiementResponse[];
 }
 
-export interface PlanDePaiement {
-  planID: number;
-  montantTotal: number;
-  nombreDeEcheances: number;
-  montantRestant: number;
-  creationDate: string;
-  planStatus: string;
-  isLocked: boolean;
-  factures: Facture[];
-  paiementDates: PaiementDate[];
+export interface PaiementResponse {
+  paiementID: number;
+  paiementDateID: number;
+  montantPayee: number;
+  dateDePaiement: string;
 }

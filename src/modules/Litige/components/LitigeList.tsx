@@ -289,7 +289,7 @@ export const LitigeList = () => {
     {
       field: 'litigeStatus',
       headerName: 'Statut',
-      width: 275,
+      width: 265,
       sortable: true,
       headerAlign: 'center',
       align: 'center',
@@ -651,8 +651,8 @@ export const LitigeList = () => {
                     <table className="w-full mb-4">
                       <thead>
                         <tr className="bg-gray-100">
-                          <th className="p-2 text-center">Montant Total Corrigé</th>
-                          <th className="p-2 text-center">Montant Dû Corrigé</th>
+                          <th className="p-2 text-center">Nouveau Montant Total</th>
+                          <th className="p-2 text-center">Nouveau Montant Dû </th>
                         </tr>
                       </thead>
                       <tbody>

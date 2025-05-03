@@ -114,7 +114,7 @@ export const FactureList = () => {
     let nombreEcheances = 0;
     let montantEcheance = 0;
     let echeances: { date: string; montant: number }[] = [];
-  
+
     if (optionPaiement === "mois") {
       nombreEcheances = valeur;
       montantEcheance = Number((montantTotal / valeur).toFixed(3));
@@ -124,7 +124,7 @@ export const FactureList = () => {
           date: "",
           montant: montantEcheance,
         }));
-  
+
       const totalSansAjustement = montantEcheance * nombreEcheances;
       const difference = Number((montantTotal - totalSansAjustement).toFixed(3));
       if (difference !== 0) {
@@ -147,9 +147,9 @@ export const FactureList = () => {
               : montantRestant,
         }));
     }
-  
+
     setResultat({ nombreEcheances, montantEcheance });
-  
+
     const dates: string[] = [];
     const now = new Date();
     now.setDate(now.getDate() + 30);
@@ -197,6 +197,7 @@ export const FactureList = () => {
         montantTotal: montantTotalSelection,
         nombreDeEcheances: initialPayment > 0 ? nombreEcheances + 1 : nombreEcheances,
         factureIDs: selectedFactures,
+        hasAdvance: initialPayment > 0, 
       };
       const planResult = await createPlanPaiement(planData);
       if (!planResult?.planID) {
@@ -210,10 +211,10 @@ export const FactureList = () => {
           planID,
           echeanceDate: today,
           montantDeEcheance: initialPayment,
-          montantPayee: initialPayment,
-          montantDue: 0,
-          isPaid: true,
-          isLocked: true,
+          montantPayee: 0,
+          montantDue: initialPayment,
+          isPaid: false,
+          isLocked: false,
         });
       }
       echeances.forEach(({ date, montant }) => {
@@ -477,10 +478,10 @@ export const FactureList = () => {
       renderCell: (params) => (
         <span
           className={`inline-block px-2 py-1 rounded text-xs font-medium mx-auto ${
-            params.value.toLowerCase() === "payee" ? "bg-green-100 text-green-600" :
+            params.value.toLowerCase() === "payee" ? "bg-green-100 text-green-700" :
             params.value.toLowerCase() === "impayee" ? "bg-red-100 text-red-700" :
             params.value.toLowerCase() === "partiellement_payee" ? "bg-yellow-100 text-yellow-800" :
-            params.value.toLowerCase() === "en_cours_de_paiement" ? "bg-orange-100 text-orange-400" :
+            params.value.toLowerCase() === "en_cours_de_paiement" ? "bg-teal-100 text-teal-600" :
             "bg-gray-200 text-black"
           }`}
         >
@@ -717,7 +718,7 @@ export const FactureList = () => {
                 {initialPayment > 0 && (
                   <div className="mb-4">
                     <p>
-                      Date : {new Date().toLocaleDateString("fr-FR")} | Montant : {formatMontant(initialPayment)} DT (Payé)
+                      Date : {new Date().toLocaleDateString("fr-FR")} | Montant : {formatMontant(initialPayment)} DT (En attente)
                     </p>
                   </div>
                 )}
@@ -749,7 +750,7 @@ export const FactureList = () => {
                         <ul className="list-disc list-inside">
                           {initialPayment > 0 && (
                             <li className="mb-1">
-                              Échéance 1 : {new Date().toLocaleDateString("fr-FR")} ( {formatMontant(initialPayment)} DT ) ✅
+                              Échéance 1 : {new Date().toLocaleDateString("fr-FR")} ( {formatMontant(initialPayment)} DT )
                             </li>
                           )}
                           {datesEcheances.map((date, index) => {
@@ -780,7 +781,7 @@ export const FactureList = () => {
                 {initialPayment > 0 && (
                   <div className="mb-4">
                     <p>
-                      Date : {new Date().toLocaleDateString("fr-FR")} | Montant : {formatMontant(initialPayment)} DT (Payé)
+                      Date : {new Date().toLocaleDateString("fr-FR")} | Montant : {formatMontant(initialPayment)} DT (En attente)
                     </p>
                   </div>
                 )}

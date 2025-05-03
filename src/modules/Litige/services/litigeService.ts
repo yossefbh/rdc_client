@@ -116,7 +116,6 @@ export const createLitige = async (litigeData: { factureID: number; typeID: numb
   }
 };
 
-// Envoyer les pièces jointes pour un litige
 export const uploadLitigeFiles = async (litigeID: number, files: File[]): Promise<void> => {
   try {
     const formData = new FormData();
@@ -159,7 +158,6 @@ export const rejectLitige = async (litigeID: number): Promise<void> => {
   }
 };
 
-// Corriger le montant d'un litige
 export const correctAmount = async (litigeID: number, correctedData: { correctedMontantTotal: number; correctedAmountDue: number }): Promise<void> => {
   try {
     const response = await fetch(`https://localhost:7284/api/Litiges/CorrectAmount/${litigeID}`, {
@@ -180,7 +178,6 @@ export const correctAmount = async (litigeID: number, correctedData: { corrected
   }
 };
 
-// Résoudre un litige de type DUPLIQUE
 export const resolveDuplicated = async (litigeID: number): Promise<string> => {
   try {
     const response = await fetch(`https://localhost:7284/api/Litiges/ResolveDuplicated/${litigeID}`, {
@@ -201,7 +198,6 @@ export const resolveDuplicated = async (litigeID: number): Promise<string> => {
     throw error;
   }
 };
-// Récupérer les liens des justificatifs pour un litige
 export const getJustificatifLinks = async (litigeID: number): Promise<{ nomFichier: string; downloadUrl: string }[]> => {
   try {
     const response = await fetch(`https://localhost:7284/api/Litiges/${litigeID}/justificatifs/links`, {
@@ -213,7 +209,6 @@ export const getJustificatifLinks = async (litigeID: number): Promise<{ nomFichi
 
     if (!response.ok) {
       const errorText = await response.text();
-      // Si l'API indique qu'il n'y a pas de justificatifs, retourner un tableau vide au lieu de lancer une erreur
       if (errorText.includes("No justificatifs found for this litige.")) {
         return [];
       }
