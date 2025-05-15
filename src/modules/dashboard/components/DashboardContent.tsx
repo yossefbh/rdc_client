@@ -10,10 +10,10 @@ import { PaiementList } from '@/modules/paiements/components/PaiementList';
 import { LitigeList } from '@/modules/Litige/components/LitigeList';
 import { AideList } from '@/modules/aide/components/AideList';
 import { AProposList } from '@/modules/aProps/components/AProposList';
-import { Bar } from 'react-chartjs-2';
+import { Bar, Pie, Line } from 'react-chartjs-2';
 import ChartJS from 'chart.js/auto';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { BarElement, CategoryScale, LinearScale, ChartData } from 'chart.js';
+import { BarElement, CategoryScale, LinearScale, ChartData, PointElement, LineElement, PieController, ArcElement } from 'chart.js';
 import Calendar from 'react-calendar';
 import { Value } from 'react-calendar/dist/esm/shared/types.js';
 import 'react-calendar/dist/Calendar.css';
@@ -21,9 +21,12 @@ import { Facture, Acheteur } from '@/modules/acheteurs/types/Interface';
 import { PlanDePaiement, PaiementDate } from '@/modules/paiements/types/Interface';
 import { Litige } from '@/modules/Litige/types/Interface';
 import { FaMoneyBillWave, FaExclamationTriangle, FaGavel, FaClock, FaMoneyCheck, FaWallet, FaCalendarCheck, FaFileInvoice } from 'react-icons/fa';
+import { RoleList } from '@/modules/auth/components/RoleList';
+import { PermissionList } from '@/modules/auth/components/PermissionList';
+import { UserList } from '@/modules/auth/components/UserList';
 
 // Register Chart.js components and the datalabels plugin
-ChartJS.register(BarElement, CategoryScale, LinearScale, ChartDataLabels);
+ChartJS.register(BarElement, CategoryScale, LinearScale, PointElement, LineElement, PieController, ArcElement, ChartDataLabels);
 
 interface Props {
   selected: string;
@@ -38,6 +41,16 @@ interface PaymentEvent {
 
 const formatMontant = (montant: number) => {
   return montant.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
+
+const formatDate = (dateString: string | undefined): string => {
+  if (!dateString) return 'N/A';
+  const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return dateString;
+  }
+  const date = new Date(dateString);
+  return !isNaN(date.getTime()) ? date.toLocaleDateString('fr-FR') : 'N/A';
 };
 
 export const DashboardContent = ({ selected }: Props) => {
@@ -111,7 +124,7 @@ export const DashboardContent = ({ selected }: Props) => {
   };
 
   useEffect(() => {
-    if (selected === 'menu') {
+    if (selected.startsWith('accueil')) {
       fetchData();
     }
   }, [selected]);
@@ -148,6 +161,7 @@ export const DashboardContent = ({ selected }: Props) => {
 
   const last7Days = new Date();
   last7Days.setDate(last7Days.getDate() - 7);
+
   const recentPayments = filteredPlans
     .flatMap((plan) =>
       plan.paiementDates?.filter((p: PaiementDate) => {
@@ -194,10 +208,8 @@ export const DashboardContent = ({ selected }: Props) => {
         status = 'paid';
       } else if (dueDate < today) {
         status = 'overdue';
-      } else if (dueDate <= next7Days) {
-        status = 'upcoming';
       } else {
-        return null;
+        status = 'upcoming';
       }
       return {
         date: dueDate,
@@ -311,9 +323,11 @@ export const DashboardContent = ({ selected }: Props) => {
   interface PaymentHistoryEntry {
     acheteur: Acheteur | undefined;
     planID: number;
+    echeanceDate: string;
     date: string;
     amount: number;
     status: string;
+    isPartial: boolean;
   }
 
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryEntry[]>([]);
@@ -324,7 +338,7 @@ export const DashboardContent = ({ selected }: Props) => {
       for (const plan of filteredPlans) {
         const paymentDates = plan.paiementDates || [];
         for (const p of paymentDates) {
-          if (p.montantPayee > 0 && p.isPaid) {
+          if (p.montantPayee > 0) { 
             const acheteurForPlan = acheteurs.find((a: Acheteur) =>
               plan.factures.some((f: Facture) => f.acheteurID === a.acheteurID)
             );
@@ -340,21 +354,31 @@ export const DashboardContent = ({ selected }: Props) => {
                 ? paymentResponses.sort((a, b) => new Date(b.dateDePaiement).getTime() - new Date(a.dateDePaiement).getTime())[0]
                 : null;
 
+              const isPartial = p.montantPayee < (p.montantDeEcheance || p.montantDue || 0);
+              const paymentStatus = isPartial ? 'Partiel ( Règlement incomplet )' : 'Payé';
+
               history.push({
                 acheteur: acheteurForPlan,
                 planID: plan.planID,
+                echeanceDate: p.echeanceDate,
                 date: mostRecentPayment ? mostRecentPayment.dateDePaiement : p.echeanceDate,
                 amount: p.montantPayee || 0,
-                status: p.isPaid ? 'Payé' : 'En attente',
+                status: paymentStatus,
+                isPartial: isPartial,
               });
             } catch (err) {
               console.error(`Erreur lors de la récupération des détails de l'échéance ${p.dateID}:`, err);
+              const isPartial = p.montantPayee < (p.montantDeEcheance || p.montantDue || 0);
+              const paymentStatus = isPartial ? 'Partiel ( Règlement incomplet )' : 'Payé';
+
               history.push({
                 acheteur: acheteurForPlan,
                 planID: plan.planID,
+                echeanceDate: p.echeanceDate,
                 date: p.echeanceDate,
                 amount: p.montantPayee || 0,
-                status: p.isPaid ? 'Payé' : 'En attente',
+                status: paymentStatus,
+                isPartial: isPartial,
               });
             }
           }
@@ -394,12 +418,134 @@ export const DashboardContent = ({ selected }: Props) => {
     setShowSuggestions(false);
   };
 
+  const selectedAcheteurData = acheteurs.find(a => a.acheteurID === selectedAcheteur);
+  const inputColorClass = selectedAcheteurData
+    ? selectedAcheteurData.score < 50
+      ? 'border-red-500 bg-red-100'
+      : selectedAcheteurData.score <= 80
+      ? 'border-orange-500 bg-orange-100'
+      : 'border-green-500 bg-green-100'
+    : 'border-gray-300 bg-white';
+
+// Data for Rapports Section
+const factureStatusBreakdown = filteredFactures.reduce((acc: Record<string, number>, f: Facture) => {
+  acc[f.status] = (acc[f.status] || 0) + 1;
+  return acc;
+}, {});
+
+const statusColorMap: Record<string, string> = {
+  PARTIELLEMENT_PAYEE: '#6B7280',
+  EN_COURS_DE_PAIEMENT: '#F59E0B',
+  IMPAYEE: '#EF4444',
+  PAYEE: '#10B981',
+};
+
+const labels = Object.keys(factureStatusBreakdown).filter(status => factureStatusBreakdown[status] > 0);
+const data = labels.map(status => factureStatusBreakdown[status]);
+const backgroundColors = labels.map(status => statusColorMap[status]);
+
+const factureStatusChartData: ChartData<"pie", number[], string> = {
+  labels: labels,
+  datasets: [
+    {
+      label: 'Répartition des Statuts',
+      data: data,
+      backgroundColor: backgroundColors,
+    },
+  ],
+};
+
+  const debtorSummary = Object.values(debtors).sort((a, b) => b.amount - a.amount);
+
+  const totalLitigesMontant = filteredLitiges
+    .filter((l) => l.litigeStatus === "EN_COURS")
+    .reduce((sum, l) => sum + (l.facture?.montantRestantDue || 0), 0);
+
+  // Data for Stats Avancées Section
+  const last12Months = Array.from({ length: 12 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (11 - i));
+    return date;
+  });
+
+  const monthlyPlanTotals = last12Months.map((month) => {
+    const start = new Date(month.getFullYear(), month.getMonth(), 1);
+    const end = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+    
+    const total = filteredPlans
+      .filter((plan) => {
+        const creationDate = new Date(plan.creationDate);
+        return creationDate >= start && creationDate <= end;
+      })
+      .reduce((sum: number, plan: PlanDePaiement) => sum + plan.montantTotal, 0);
+    
+    return total;
+  });
+
+  const planTotalsChartData: ChartData<"line", number[], string> = {
+    labels: last12Months.map((m) => m.toLocaleString('fr-FR', { month: 'short', year: 'numeric' })),
+    datasets: [
+      {
+        label: 'Total des Plans (DT)',
+        data: monthlyPlanTotals,
+        borderColor: '#3B82F6',
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        fill: true,
+      },
+    ],
+  };
+
+  const monthlyEncaissements = last12Months.map((month) => {
+    const start = new Date(month.getFullYear(), month.getMonth(), 1);
+    const end = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+    
+    const total = filteredPlans
+      .flatMap((plan) => plan.paiementDates || [])
+      .filter((p: PaiementDate) => {
+        if (!p.isPaid || p.montantPayee === 0) {
+          return false;
+        }
+        
+        const paymentDateStr = p.paiementResponses?.[0]?.dateDePaiement || p.echeanceDate;
+        const paymentDate = new Date(paymentDateStr);
+          
+        const isValidDate = !isNaN(paymentDate.getTime());
+        const isInRange = isValidDate && paymentDate >= start && paymentDate <= end;
+        return isValidDate && isInRange;
+      })
+      .reduce((sum: number, p: PaiementDate) => {
+        return sum + (p.montantPayee || 0);
+      }, 0);
+        return total;
+  });
+
+  const encaissementsChartData: ChartData<"bar", number[], string> = {
+    labels: last12Months.map((m) => m.toLocaleString('fr-FR', { month: 'short', year: 'numeric' })),
+        datasets: [
+      {
+        label: 'Encaissements (DT)',
+        data: monthlyEncaissements,
+        backgroundColor: '#10B981',
+      },
+    ],
+  };
+
+  const totalLitiges = filteredLitiges.length;
+  const resolvedLitiges = filteredLitiges.filter((l) => l.litigeStatus === "RESOLU").length;
+  const litigeResolutionRate = totalLitiges > 0 ? (resolvedLitiges / totalLitiges) * 100 : 0;
+
   return (
     <main className="flex-1 bg-gradient-to-br from-gray-50 to-gray-200 p-8 h-screen overflow-auto">
-      {selected === 'menu' && (
+      {selected.startsWith('accueil') && (
         <>
           <h1 className="text-4xl font-extrabold mb-6 text-center text-blue-500">
-            Tableau De Bord
+            {selected === 'accueil-calendrier'
+              ? 'Calendrier des Échéances'
+              : selected === 'accueil-tableau'
+              ? 'Tableau De Bord'
+              : selected === 'accueil-rapports'
+              ? 'Rapports'
+              : 'Statistiques Avancées'}
           </h1>
 
           <div className="mb-8 flex items-center gap-4 relative">
@@ -414,7 +560,7 @@ export const DashboardContent = ({ selected }: Props) => {
                 onFocus={() => setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 placeholder="Chercher Acheteur"
-                className="w-full border p-3 rounded-lg text-black shadow-sm focus:ring-2 focus:ring-blue-500 transition duration-150 ease-in-out"
+                className={`w-full border p-3 rounded-lg text-black shadow-sm focus:ring-2 focus:ring-blue-500 transition duration-150 ease-in-out ${inputColorClass}`}
               />
               {showSuggestions && (
                 <ul className="absolute z-10 w-full bg-white border rounded-lg mt-1 max-h-60 overflow-auto shadow-lg">
@@ -482,116 +628,8 @@ export const DashboardContent = ({ selected }: Props) => {
             <p className="text-center text-black text-lg">Chargement des données...</p>
           ) : (
             <div className="space-y-10">
-              {factures.length > 0 && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
-                      <FaMoneyBillWave className="text-red-600 text-3xl" />
-                      <div className="relative">
-                        <h2 className="text-lg font-semibold text-black">Montant Total Dû</h2>
-                        <p className="text-2xl font-bold text-red-600">{formatMontant(totalDue)} DT</p>
-                        <p className="absolute -right-15 -bottom-6 text-sm text-red-600">{unpaidFacturesCount} factures</p>
-                      </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
-                      <FaWallet className="text-teal-600 text-3xl" />
-                      <div className="relative">
-                        <h2 className="text-lg font-semibold text-black">Factures Encaissées</h2>
-                        <p className="text-2xl font-bold text-teal-600">{formatMontant(facturesEncaisseesMontant)} DT</p>
-                        <p className="absolute -right-15 -bottom-6 text-sm text-teal-600">{facturesEncaisseesCount} factures</p>
-                      </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
-                      <FaClock className="text-green-600 text-3xl" />
-                      <div>
-                        <h2 className="text-lg font-semibold text-black">Paiements (7 Derniers Jours)</h2>
-                        {paymentsLast7Days > 0 ? (
-                          <p className="text-2xl font-bold text-green-600">{formatMontant(paymentsLast7Days)} DT</p>
-                        ) : (
-                          <p className="text-sm text-black">Aucun paiement récent</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
-                      <FaCalendarCheck className="text-cyan-600 text-3xl" />
-                      <div>
-                        <h2 className="text-lg font-semibold text-black">Prochains Paiements (7 Jours)</h2>
-                        <p className="text-2xl font-bold text-cyan-600">{formatMontant(upcomingPaymentsTotal)} DT</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
-                      <FaFileInvoice className="text-purple-600 text-3xl" />
-                      <div>
-                        <h2 className="text-lg font-semibold text-black">Nombre Total de Factures</h2>
-                        <p className="text-2xl font-bold text-purple-600">{totalFactures}</p>
-                      </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
-                      <FaMoneyCheck className="text-blue-600 text-3xl" />
-                      <div>
-                        <h2 className="text-lg font-semibold text-black">Factures en Cours de Paiement</h2>
-                        <p className="text-2xl font-bold text-blue-600">{facturesEnCoursDePaiement}</p>
-                      </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
-                      <FaExclamationTriangle className="text-orange-600 text-3xl" />
-                      <div>
-                        <h2 className="text-lg font-semibold text-black">Factures en Retard</h2>
-                        <p className="text-2xl font-bold text-orange-600">{overdueFactures}</p>
-                      </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
-                      <FaGavel className="text-yellow-600 text-3xl" />
-                      <div>
-                        <h2 className="text-lg font-semibold text-black">Litiges en Cours</h2>
-                        <p className="text-2xl font-bold text-yellow-600">{unresolvedLitiges}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-                    <div className="bg-white p-12 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex flex-col items-center max-w-sm mx-auto">
-                      <div className="relative w-34 h-33">
-                        <svg className="w-full h-full" viewBox="0 0 44 44">
-                          <circle
-                            cx="22"
-                            cy="22"
-                            r="20"
-                            fill="none"
-                            stroke="#e5e7eb"
-                            strokeWidth="4"
-                          />
-                          <circle
-                            cx="22"
-                            cy="22"
-                            r="20"
-                            fill="none"
-                            stroke="#9333ea"
-                            strokeWidth="4"
-                            strokeDasharray="125.6"
-                            strokeDashoffset={125.6 - (pourcentageFacturesPayees * 125.6) / 100}
-                            strokeLinecap="round"
-                            transform="rotate(-90 22 22)"
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-2xl font-bold text-purple-600">
-                            {pourcentageFacturesPayees.toFixed(2).replace('.', ',')} %
-                          </span>
-                        </div>
-                      </div>
-                      <h2 className="font-semibold text-black mt-4">Taux de Recouvrement</h2>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {plansPaiement.length > 0 && (
+              {selected === 'accueil-calendrier' && plansPaiement.length > 0 && (
                 <div className="bg-white p-6 rounded-xl shadow-lg">
-                  <h2 className="text-lg font-semibold mb-4 text-black text-center">Calendrier des Échéances</h2>
                   <div className="flex justify-center">
                     <div className="calendar-container">
                       <Calendar
@@ -701,13 +739,508 @@ export const DashboardContent = ({ selected }: Props) => {
                 </div>
               )}
 
-              {factures.length > 0 && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {selected === 'accueil-tableau' && (
+                <>
+                  {factures.length > 0 && (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
+                          <FaMoneyBillWave className="text-red-600 text-3xl" />
+                          <div className="relative">
+                            <h2 className="text-lg font-semibold text-black">Montant Total Dû</h2>
+                            <p className="text-2xl font-bold text-red-600">{formatMontant(totalDue)} DT</p>
+                            <p className="absolute -right-23 -bottom-6 text-sm text-red-600">{unpaidFacturesCount} factures</p>
+                          </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
+                          <FaWallet className="text-teal-600 text-3xl" />
+                          <div className="relative">
+                            <h2 className="text-lg font-semibold text-black">Factures Encaissées</h2>
+                            <p className="text-2xl font-bold text-teal-600">{formatMontant(facturesEncaisseesMontant)} DT</p>
+                            <p className="absolute -right-15 -bottom-6 text-sm text-teal-600">{facturesEncaisseesCount} factures</p>
+                          </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
+                          <FaClock className="text-green-600 text-3xl" />
+                          <div>
+                            <h2 className="text-lg font-semibold text-black">Paiements (7 Derniers Jours)</h2>
+                            {paymentsLast7Days > 0 ? (
+                              <p className="text-2xl font-bold text-green-600">{formatMontant(paymentsLast7Days)} DT</p>
+                            ) : (
+                              <p className="text-sm text-black">Aucun paiement récent</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
+                          <FaCalendarCheck className="text-cyan-600 text-3xl" />
+                          <div>
+                            <h2 className="text-lg font-semibold text-black">Prochains Paiements (7 Jours)</h2>
+                            <p className="text-2xl font-bold text-cyan-600">{formatMontant(upcomingPaymentsTotal)} DT</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
+                          <FaFileInvoice className="text-purple-600 text-3xl" />
+                          <div>
+                            <h2 className="text-lg font-semibold text-black">Nombre Total de Factures</h2>
+                            <p className="text-2xl font-bold text-purple-600">{totalFactures}</p>
+                          </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
+                          <FaMoneyCheck className="text-blue-600 text-3xl" />
+                          <div>
+                            <h2 className="text-lg font-semibold text-black">Factures en Cours de Paiement</h2>
+                            <p className="text-2xl font-bold text-blue-600">{facturesEnCoursDePaiement}</p>
+                          </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
+                          <FaExclamationTriangle className="text-orange-600 text-3xl" />
+                          <div>
+                            <h2 className="text-lg font-semibold text-black">Factures en Retard</h2>
+                            <p className="text-2xl font-bold text-orange-600">{overdueFactures}</p>
+                          </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex items-center space-x-4">
+                          <FaGavel className="text-yellow-600 text-3xl" />
+                          <div>
+                            <h2 className="text-lg font-semibold text-black">Litiges en Cours</h2>
+                            <p className="text-2xl font-bold text-yellow-600">{unresolvedLitiges}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+                        <div className="bg-white p-12 rounded-xl shadow-lg hover:shadow-xl transition duration-200 ease-in-out flex flex-col items-center max-w-sm mx-auto">
+                          <div className="relative w-34 h-33">
+                            <svg className="w-full h-full" viewBox="0 0 44 44">
+                              <circle
+                                cx="22"
+                                cy="22"
+                                r="20"
+                                fill="none"
+                                stroke="#e5e7eb"
+                                strokeWidth="4"
+                              />
+                              <circle
+                                cx="22"
+                                cy="22"
+                                r="20"
+                                fill="none"
+                                stroke="#9333ea"
+                                strokeWidth="4"
+                                strokeDasharray="125.6"
+                                strokeDashoffset={125.6 - (pourcentageFacturesPayees * 125.6) / 100}
+                                strokeLinecap="round"
+                                transform="rotate(-90 22 22)"
+                              />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-2xl font-bold text-purple-600">
+                                {pourcentageFacturesPayees.toFixed(2).replace('.', ',')} %
+                              </span>
+                            </div>
+                          </div>
+                          <h2 className="font-semibold text-black mt-4">Taux de Recouvrement</h2>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {factures.length > 0 && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="bg-white p-6 rounded-xl shadow-lg">
+                        <h2 className="text-lg font-semibold mb-4 text-black">Balance Âgée</h2>
+                        <div style={{ height: '220px', overflow: 'hidden' }}>
+                          <Bar
+                            data={agingChartData}
+                            options={{
+                              maintainAspectRatio: false,
+                              plugins: {
+                                legend: {
+                                  display: false,
+                                },
+                                datalabels: {
+                                  anchor: 'end',
+                                  align: 'top',
+                                  color: '#000',
+                                  font: {
+                                    size: 12,
+                                  },
+                                  formatter: (value: number) => {
+                                    return formatMontant(value) + ' DT';
+                                  },
+                                },
+                              },
+                              scales: {
+                                x: {
+                                  ticks: {
+                                    font: {
+                                      size: 10,
+                                    },
+                                  },
+                                  grid: {
+                                    display: false,
+                                  },
+                                },
+                                y: {
+                                  ticks: {
+                                    font: {
+                                      size: 12,
+                                    },
+                                    stepSize: 1000,
+                                  },
+                                  grid: {
+                                    display: false,
+                                  },
+                                },
+                              },
+                              layout: {
+                                padding: {
+                                  top: 20,
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                },
+                              },
+                            }}
+                            height={150}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-6 rounded-xl shadow-lg">
+                        <h2 className="text-lg font-semibold mb-2 text-black">Flop 5 Des Créanciers</h2>
+                        <div className="flex space-x-4 mb-4">
+                          <label className="flex items-center text-black">
+                            <input
+                              type="radio"
+                              name="debtorSort"
+                              value="highest"
+                              checked={debtorSortOrder === 'highest'}
+                              onChange={() => setDebtorSortOrder('highest')}
+                              className="mr-2"
+                            />
+                            Top 5 (Plus Haut)
+                          </label>
+                          <label className="flex items-center text-black">
+                            <input
+                              type="radio"
+                              name="debtorSort"
+                              value="lowest"
+                              checked={debtorSortOrder === 'lowest'}
+                              onChange={() => setDebtorSortOrder('lowest')}
+                              className="mr-2"
+                            />
+                            Top 5 (Plus Bas)
+                          </label>
+                        </div>
+                        <div style={{ height: '220px', overflow: 'hidden' }}>
+                          <Bar
+                            data={{
+                              ...topDebtorsChartData,
+                              datasets: [
+                                {
+                                  ...topDebtorsChartData.datasets[0],
+                                  barThickness: 20,
+                                },
+                              ],
+                            }}
+                            options={{
+                              maintainAspectRatio: false,
+                              indexAxis: 'y',
+                              plugins: {
+                                legend: {
+                                  display: false,
+                                },
+                                datalabels: {
+                                  anchor: 'end',
+                                  align: 'right',
+                                  color: '#000',
+                                  font: {
+                                    size: 12,
+                                  },
+                                  formatter: (value: number) => {
+                                    return formatMontant(value) + ' DT';
+                                  },
+                                  offset: 5,
+                                },
+                              },
+                              scales: {
+                                x: {
+                                  min: 0,
+                                  max: maxDebtorAmount,
+                                  ticks: {
+                                    font: {
+                                      size: 8,
+                                    },
+                                    stepSize: 100,
+                                    callback: (value: number | string) => {
+                                      const numericValue = typeof value === 'string' ? parseFloat(value) : value;
+                                      if (isNaN(numericValue)) return null;
+                                      return Math.round(numericValue);
+                                    },
+                                  },
+                                  grid: {
+                                    display: false,
+                                  },
+                                },
+                                y: {
+                                  ticks: {
+                                    font: {
+                                      size: 10,
+                                    },
+                                  },
+                                  grid: {
+                                    display: false,
+                                  },
+                                },
+                              },
+                              layout: {
+                                padding: {
+                                  top: 0,
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 60,
+                                },
+                              },
+                            }}
+                            height={150}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {plansPaiement.length > 0 && (
+                    <div className="bg-white p-6 rounded-xl shadow-lg">
+                      <h2 className="text-lg font-semibold mb-4 text-black">Plans de la Semaine Dernière</h2>
+                      <p className="text-black">Nombre de Plans : {lastWeekPlans.length}</p>
+                      <p className="text-black">Montant Total : {formatMontant(lastWeekTotal)} DT</p>
+                      <p className="text-black Πολυγλωσσικό περιεχόμενο mt-2">Répartition des Statuts :</p>
+                      <ul className="list-disc list-inside text-black">
+                        {Object.entries(lastWeekStatusBreakdown).map(([status, count]: [string, number]) => (
+                          <li key={status}>{status} : {count}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {plansPaiement.length > 0 && (
+                    <div className="bg-white p-6 rounded-xl shadow-lg">
+                      <h2 className="text-lg font-semibold mb-4 text-black">Historique des Paiements (10 plus récents)</h2>
+                      {paymentHistory.length > 0 ? (
+                        <table className="w-full text-left">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="py-2 px-6 text-black">Acheteur</th>
+                              <th className="py-2 px-7 text-black">Plan</th>
+                              <th className="py-2 px-11 text-black">Échéance</th>
+                              <th className="py-2 px-11 text-black">Date de Paiement</th>
+                              <th className="py-2 px-6 text-black">Montant (DT)</th>
+                              <th className="py-2 px-8 text-black">Statut</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paymentHistory.map((payment: PaymentHistoryEntry, index: number) => (
+                              <tr key={index} className="border-b hover:bg-gray-50 transition duration-150 ease-in-out">
+                                <td className="py-2 px-4 text-black">
+                                  {payment.acheteur ? `${payment.acheteur.nom} ${payment.acheteur.prenom}` : 'N/A'}
+                                </td>
+                                <td className="py-2 px-8 text-black">{payment.planID}</td>
+                                <td className="py-2 px-10 text-black">
+                                  {formatDate(payment.echeanceDate)}
+                                </td>
+                                <td className="py-2 px-15 text-black">
+                                  {new Date(payment.date).toLocaleDateString('fr-FR')}
+                                </td>
+                                <td className="py-2 px-9 text-black">{formatMontant(payment.amount)}</td>
+                                <td className="py-2 px-9 text-black">{payment.status}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <p className="text-black">Aucun paiement récent.</p>
+                      )}
+                    </div>
+                  )}
+
+                  {plansPaiement.length > 0 && (
+                    <div className="bg-white p-6 rounded-xl shadow-lg">
+                      <h2 className="text-lg font-semibold mb-4 text-black">Paiements à Venir (Prochaines 7 Jours)</h2>
+                      {upcomingPayments.length > 0 ? (
+                        <ul className="space-y-2">
+                          {upcomingPayments.map((payment: PaiementDate) => (
+                            <li key={payment.dateID} className="flex justify-between text-black">
+                              <span>
+                                Échéance : {new Date(payment.echeanceDate).toLocaleDateString('fr-FR')} ( Plan : {payment.planID} )
+                              </span>
+                              <span className="font-semibold">{formatMontant(payment.montantDue)} DT</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-black">Aucun paiement prévu dans les 7 prochains jours.</p>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {selected === 'accueil-rapports' && (
+                <div className="space-y-10">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white p-6 rounded-xl shadow-lg">
+                      <h2 className="text-lg font-semibold mb-4 text-black">Répartition des Statuts des Factures</h2>
+                      <div style={{ height: '220px', overflow: 'hidden' }}>
+                        <Pie
+                          data={factureStatusChartData}
+                          options={{
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                position: 'bottom',
+                                labels: {
+                                  font: {
+                                    size: 12,
+                                  },
+                                  color: '#000',
+                                },
+                              },
+                              datalabels: {
+                                color: '#fff',
+                                font: {
+                                  size: 12,
+                                  weight: 'bold',
+                                },
+                                formatter: (value: number, context: any) => {
+                                  const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0);
+                                  const percentage = ((value / total) * 100).toFixed(1);
+                                  return `${percentage}%`;
+                                },
+                              },
+                            },
+                          }}
+                          height={220}
+                        />
+                      </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-xl shadow-lg">
+                      <h2 className="text-lg font-semibold mb-4 text-black">Résumé des Factures par Acheteur</h2>
+                      {debtorSummary.length > 0 ? (
+                        <table className="w-full text-left">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="py-2 px-6 text-black">Acheteur</th>
+                              <th className="py-2 px-4 text-black">Montant Dû (DT)</th>
+                              <th className="py-2 px-5 text-black">État</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {debtorSummary.map((debtor, index) => {
+                              const score = debtor.acheteur?.score || 0;
+                              const etat = score < 50 ? 'Risqué' : score <= 80 ? 'Moyen' : 'Fiable';
+                              const etatColor = score < 50 ? 'text-red-600' : score <= 80 ? 'text-orange-600' : 'text-green-600';
+                              return (
+                                <tr key={index} className="border-b hover:bg-gray-50">
+                                  <td className="py-2 px-4 text-black">
+                                    {debtor.acheteur ? `${debtor.acheteur.nom} ${debtor.acheteur.prenom}` : 'Inconnu'}
+                                  </td>
+                                  <td className="py-2 px-8 text-black">{formatMontant(debtor.amount)}</td>
+                                  <td className={`py-2 px-4 ${etatColor}`}>{etat}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <p className="text-black">Aucune facture impayée à rapporter.</p>
+                      )}
+                    </div>
+                  </div>
                   <div className="bg-white p-6 rounded-xl shadow-lg">
-                    <h2 className="text-lg font-semibold mb-4 text-black">Balance Âgée</h2>
+                    <h2 className="text-lg font-semibold mb-4 text-black">Montant Total des Litiges en Cours</h2>
+                    <p className="text-2xl font-bold text-yellow-600">{formatMontant(totalLitigesMontant)} DT</p>
+                    <p className="text-black">Nombre de litiges : {unresolvedLitiges}</p>
+                  </div>
+                </div>
+              )}
+
+              {selected === 'accueil-stats-avancees' && (
+                <div className="space-y-10">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white p-6 rounded-xl shadow-lg">
+                      <h2 className="text-lg font-semibold mb-4 text-black">Total des Plans par Mois (12 Derniers Mois)</h2>
+                      <div style={{ height: '220px', overflow: 'hidden' }}>
+                        <Line
+                          data={planTotalsChartData}
+                          options={{
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                display: false,
+                              },
+                              datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                color: '#000',
+                                offset:-3,
+                                font: {
+                                  size: 11,
+                                },
+                                formatter: (value: number) => formatMontant(value),
+                              },
+                            },
+                            scales: {
+                              x: {
+                                ticks: {
+                                  font: {
+                                    size: 10,
+                                  },
+                                },
+                                grid: {
+                                  display: false,
+                                },
+                              },
+                              y: {
+                                ticks: {
+                                  font: {
+                                    size: 12,
+                                  },
+                                  stepSize: 500,
+                                  callback: (value: number | string) => {
+                                    const numValue = Number(value);
+                                    return numValue === 0 ? '' : formatMontant(numValue); 
+                                  },                               
+                                 },
+                                grid: {
+                                  display: false,
+                                },
+                              },
+                            },
+                          }}
+                          height={220}
+                        />
+                      </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 className="text-lg font-semibold mb-4 text-black">Encaissements Mensuels (12 Derniers Mois)</h2>
                     <div style={{ height: '220px', overflow: 'hidden' }}>
-                      <Bar
-                        data={agingChartData}
+                      <Line
+                        data={{
+                          ...encaissementsChartData,
+                          datasets: [
+                            {
+                              label: 'Encaissements (DT)',
+                              data: monthlyEncaissements,
+                              borderColor: '#10B981',
+                              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                              fill: true,
+                            },
+                          ],
+                        }}
                         options={{
                           maintainAspectRatio: false,
                           plugins: {
@@ -718,12 +1251,11 @@ export const DashboardContent = ({ selected }: Props) => {
                               anchor: 'end',
                               align: 'top',
                               color: '#000',
+                              offset: -3,
                               font: {
-                                size: 12,
+                                size: 11,
                               },
-                              formatter: (value: number) => {
-                                return formatMontant(value) + ' DT';
-                              },
+                              formatter: (value: number) => formatMontant(value),
                             },
                           },
                           scales: {
@@ -742,197 +1274,59 @@ export const DashboardContent = ({ selected }: Props) => {
                                 font: {
                                   size: 12,
                                 },
-                                stepSize: 1000,
-                              },
-                              grid: {
-                                display: false,
-                              },
-                            },
-                          },
-                          layout: {
-                            padding: {
-                              top: 20,
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                            },
-                          },
-                        }}
-                        height={150}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-6 rounded-xl shadow-lg">
-                    <h2 className="text-lg font-semibold mb-2 text-black">Flop 5 Des Créanciers</h2>
-                    <div className="flex space-x-4 mb-4">
-                      <label className="flex items-center text-black">
-                        <input
-                          type="radio"
-                          name="debtorSort"
-                          value="highest"
-                          checked={debtorSortOrder === 'highest'}
-                          onChange={() => setDebtorSortOrder('highest')}
-                          className="mr-2"
-                        />
-                        Top 5 (Plus Haut)
-                      </label>
-                      <label className="flex items-center text-black">
-                        <input
-                          type="radio"
-                          name="debtorSort"
-                          value="lowest"
-                          checked={debtorSortOrder === 'lowest'}
-                          onChange={() => setDebtorSortOrder('lowest')}
-                          className="mr-2"
-                        />
-                        Top 5 (Plus Bas)
-                      </label>
-                    </div>
-                    <div style={{ height: '220px', overflow: 'hidden' }}>
-                      <Bar
-                        data={{
-                          ...topDebtorsChartData,
-                          datasets: [
-                            {
-                              ...topDebtorsChartData.datasets[0],
-                              barThickness: 20,
-                            },
-                          ],
-                        }}
-                        options={{
-                          maintainAspectRatio: false,
-                          indexAxis: 'y',
-                          plugins: {
-                            legend: {
-                              display: false,
-                            },
-                            datalabels: {
-                              anchor: 'end',
-                              align: 'right',
-                              color: '#000',
-                              font: {
-                                size: 12,
-                              },
-                              formatter: (value: number) => {
-                                return formatMontant(value) + ' DT';
-                              },
-                              offset: 5, 
-                            },
-                          },
-                          scales: {
-                            x: {
-                              min: 0,
-                              max: maxDebtorAmount, 
-                              ticks: {
-                                font: {
-                                  size: 8,
-                                },
-                                stepSize: 100, 
+                                stepSize: 500,
                                 callback: (value: number | string) => {
-                                  const numericValue = typeof value === 'string' ? parseFloat(value) : value;
-                                  if (isNaN(numericValue)) return null;
-                                  return Math.round(numericValue);
+                                  const numValue = Number(value);
+                                  return numValue === 0 ? '' : formatMontant(numValue); 
                                 },
                               },
                               grid: {
                                 display: false,
                               },
-                            },
-                            y: {
-                              ticks: {
-                                font: {
-                                  size: 10,
-                                },
-                              },
-                              grid: {
-                                display: false,
-                              },
-                            },
-                          },
-                          layout: {
-                            padding: {
-                              top: 0,
-                              bottom: 0,
-                              left: 0,
-                              right: 60, 
+                              suggestedMax: Math.ceil(Math.max(...monthlyEncaissements) / 500) * 500, 
                             },
                           },
                         }}
-                        height={150}
+                        height={222}
                       />
                     </div>
                   </div>
-                </div>
-              )}
-
-              {plansPaiement.length > 0 && (
-                <div className="bg-white p-6 rounded-xl shadow-lg">
-                  <h2 className="text-lg font-semibold mb-4 text-black">Plans de la Semaine Dernière</h2>
-                  <p className="text-black">Nombre de Plans : {lastWeekPlans.length}</p>
-                  <p className="text-black">Montant Total : {formatMontant(lastWeekTotal)} DT</p>
-                  <p className="text-black mt-2">Répartition des Statuts :</p>
-                  <ul className="list-disc list-inside text-black">
-                    {Object.entries(lastWeekStatusBreakdown).map(([status, count]: [string, number]) => (
-                      <li key={status}>{status} : {count}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {plansPaiement.length > 0 && (
-                <div className="bg-white p-6 rounded-xl shadow-lg">
-                  <h2 className="text-lg font-semibold mb-4 text-black">Historique des Paiements (10 plus récents)</h2>
-                  {paymentHistory.length > 0 ? (
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="py-2 px-6 text-black">Acheteur</th>
-                          <th className="py-2 px-7 text-black">Plan</th>
-                          <th className="py-2 px-9 text-black">Date de Paiement</th>
-                          <th className="py-2 px-6 text-black">Montant (DT)</th>
-                          <th className="py-2 px-4 text-black">Statut</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paymentHistory.map((payment: PaymentHistoryEntry, index: number) => (
-                          <tr key={index} className="border-b hover:bg-gray-50 transition duration-150 ease-in-out">
-                            <td className="py-2 px-4 text-black">
-                              {payment.acheteur ? `${payment.acheteur.nom} ${payment.acheteur.prenom}` : 'N/A'}
-                            </td>
-                            <td className="py-2 px-8 text-black">{payment.planID}</td>
-                            <td className="py-2 px-14 text-black">
-                              {new Date(payment.date).toLocaleDateString('fr-FR')}
-                            </td>
-                            <td className="py-2 px-9 text-black">{formatMontant(payment.amount)}</td>
-                            <td className="py-2 px-5 text-black">{payment.status}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <p className="text-black">Aucun paiement récent.</p>
-                  )}
-                </div>
-              )}
-
-              {plansPaiement.length > 0 && (
-                <div className="bg-white p-6 rounded-xl shadow-lg">
-                  <h2 className="text-lg font-semibold mb-4 text-black">Paiements à Venir (Prochaines 7 Jours)</h2>
-                  {upcomingPayments.length > 0 ? (
-                    <ul className="space-y-2">
-                      {upcomingPayments.map((payment: PaiementDate) => (
-                        <li key={payment.dateID} className="flex justify-between text-black">
-                          <span>
-                            Échéance : {new Date(payment.echeanceDate).toLocaleDateString('fr-FR')} ( Plan : {payment.planID} )
-                          </span>
-                          <span className="font-semibold">{formatMontant(payment.montantDue)} DT</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-black">Aucun paiement prévu dans les 7 prochains jours.</p>
-                  )}
+                  </div>
+                  <div className="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 className="text-lg font-semibold mb-4 text-black">Taux de Résolution des Litiges</h2>
+                    <div className="relative w-34 h-33 mx-auto">
+                      <svg className="w-full h-full" viewBox="0 0 44 44">
+                        <circle
+                          cx="22"
+                          cy="22"
+                          r="20"
+                          fill="none"
+                          stroke="#e5e7eb"
+                          strokeWidth="4"
+                        />
+                        <circle
+                          cx="22"
+                          cy="22"
+                          r="20"
+                          fill="none"
+                          stroke="#10B981"
+                          strokeWidth="4"
+                          strokeDasharray="125.6"
+                          strokeDashoffset={125.6 - (litigeResolutionRate * 125.6) / 100}
+                          strokeLinecap="round"
+                          transform="rotate(-90 22 22)"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-green-600">
+                          {litigeResolutionRate.toFixed(2).replace('.', ',')} %
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-center text-black mt-4">
+                      {resolvedLitiges} litiges résolus sur {totalLitiges}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -945,6 +1339,9 @@ export const DashboardContent = ({ selected }: Props) => {
       {selected === 'Litige' && <LitigeList />}
       {selected === 'aide' && <AideList />}
       {selected === 'aPropos' && <AProposList />}
+      {selected === 'roles' && <RoleList />}
+      {selected === 'permissions' && <PermissionList />}
+      {selected === 'users' && <UserList />}
     </main>
   );
 };

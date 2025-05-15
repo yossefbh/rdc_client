@@ -539,6 +539,10 @@ export const FactureList = () => {
     },
   ];
 
+  const selectedAcheteurScore = selectedAcheteur !== null
+    ? acheteurs.find(a => a.acheteurID === selectedAcheteur)?.score ?? 0
+    : 0;
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
@@ -639,11 +643,16 @@ export const FactureList = () => {
               <select
                 value={optionPaiement}
                 onChange={(e) => {
-                  setOptionPaiement(e.target.value);
+                  const newOption = e.target.value;
+                  if (newOption === "libre" && selectedAcheteur !== null && selectedAcheteurScore < 50) {
+                    toast.error("Votre score est insuffisant (< 50) ! Vous ne pouvez pas utiliser cette option.", { autoClose: 3000 });
+                    return; 
+                  }
+                  setOptionPaiement(newOption);
                   setResultat(null);
                   setDatesEcheances([]);
                   setValeur(0);
-                  setShowInitialPaymentPrompt(e.target.value !== "");
+                  setShowInitialPaymentPrompt(newOption !== "");
                   setShowInitialPaymentInput(false);
                   setShowLibreModal(false);
                   setInitialPayment(0);
@@ -723,7 +732,7 @@ export const FactureList = () => {
                   </div>
                 )}
                 <strong className="mb-8 block">
-                  Montant restant à payer : {formatMontant(calculateRemainingAmount())} DT
+                  Montant restant à payer : {formatMontant(montantTotalSelection - initialPayment)} DT
                 </strong>
                 <input
                   type="number"

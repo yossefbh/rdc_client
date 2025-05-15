@@ -3,6 +3,7 @@ import { getAcheteurs } from "@/modules/acheteurs/services/AcheteurService";
 import { Acheteur } from "@/modules/acheteurs/types/Interface";
 import Box from '@mui/material/Box';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { FaStar, FaStarHalfAlt } from 'react-icons/fa';
 
 export const AcheteurList = () => {
   const [acheteurs, setAcheteurs] = useState<Acheteur[]>([]);
@@ -27,7 +28,7 @@ export const AcheteurList = () => {
     {
       field: 'nom',
       headerName: 'Nom',
-      width: 220,
+      width: 205,
       sortable: true,
       filterable: true,
       headerAlign: 'center',
@@ -37,7 +38,7 @@ export const AcheteurList = () => {
     {
       field: 'prenom',
       headerName: 'Prénom',
-      width: 220,
+      width: 205,
       sortable: true,
       filterable: true,
       headerAlign: 'center',
@@ -47,7 +48,7 @@ export const AcheteurList = () => {
     {
       field: 'adresse',
       headerName: 'Adresse',
-      width: 270,
+      width: 225,
       sortable: true,
       filterable: true,
       headerAlign: 'center',
@@ -57,7 +58,7 @@ export const AcheteurList = () => {
     {
       field: 'email',
       headerName: 'Email',
-      width: 300,
+      width: 260,
       sortable: true,
       filterable: true,
       headerAlign: 'center',
@@ -67,12 +68,60 @@ export const AcheteurList = () => {
     {
       field: 'telephone',
       headerName: 'Téléphone',
-      width: 290,
+      width: 230,
       sortable: true,
       filterable: true,
       headerAlign: 'center',
       align: 'center',
       headerClassName: 'text-lg font-bold',
+    },
+    {
+      field: 'score',
+      headerName: 'Score',
+      width: 180,
+      sortable: true,
+      filterable: true,
+      headerAlign: 'center',
+      align: 'center',
+      headerClassName: 'text-lg font-bold',
+      renderCell: (params) => {
+        const score = params.value as number;
+        const starRating = score / 20; 
+        const filledStars = Math.floor(starRating); 
+        const hasHalfStar = starRating % 1 >= 0.5; 
+        const stars = Array(5).fill(0).map((_, index) => {
+          if (index < filledStars) {
+            return (
+              <FaStar
+                key={index}
+                className="text-black"
+                size={20}
+              />
+            );
+          }
+          if (index === filledStars && hasHalfStar) {
+            return (
+              <FaStarHalfAlt
+                key={index}
+                className="text-black"
+                size={20}
+              />
+            );
+          }
+          return (
+            <FaStar
+              key={index}
+              className="text-gray-300"
+              size={20}
+            />
+          );
+        });
+        return (
+          <div className="flex items-center justify-center h-full space-x-1">
+            {stars}
+          </div>
+        );
+      },
     },
   ];
 
@@ -106,7 +155,7 @@ export const AcheteurList = () => {
           localeText={{
             noRowsLabel: "Aucun acheteur trouvé.",
           }}
-          rowHeight={65}
+          rowHeight={70}
           sx={{
             '& .MuiDataGrid-cell': {
               overflow: 'visible',
