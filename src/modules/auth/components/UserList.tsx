@@ -7,15 +7,21 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import MonitorIcon from '@mui/icons-material/Monitor';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
-
 export const UserList = () => {
-  const { users, roles, loading, error, fetchUsers, fetchRoles, handleCreateUser } = useAuth();
+  const { users, roles, loading, error, fetchUsers, fetchRoles, handleCreateUser, fetchUserHistory, handleDeactivateUser, handleActivateUser } = useAuth();
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [email, setEmail] = useState<string>('');
   const [selectedRoleId, setSelectedRoleId] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
+  const [userHistory, setUserHistory] = useState<any>(null);
+  const [selectedHistoryType, setSelectedHistoryType] = useState<string>('createdPlans');
+  const [showDeactivateModal, setShowDeactivateModal] = useState<boolean>(false);
+  const [showActivateModal, setShowActivateModal] = useState<boolean>(false);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -67,6 +73,42 @@ export const UserList = () => {
     }
   };
 
+  const toggleMenu = (userId: number, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setOpenMenuId(openMenuId === userId ? null : userId);
+  };
+
+  const showUserHistory = async (userId: number) => {
+    try {
+      const history = await fetchUserHistory(userId);
+      console.log("Historique brut retourné par fetchUserHistory:", history);
+      if (history && typeof history === 'object') {
+        console.log("Contenu de userHistory:", {
+          createdPlans: history.createdPlans,
+          validatedPlans: history.validatedPlans,
+          declaredLitiges: history.declaredLitiges,
+          resolutedLitiges: history.resolutedLitiges,
+          paidEcheances: history.paidEcheances,
+        });
+      } else {
+        console.warn("Historique invalide ou vide pour userId:", userId);
+      }
+      setUserHistory(history);
+      setShowHistoryModal(true);
+      setOpenMenuId(null);
+    } catch (err) {
+      console.error("Erreur lors de la récupération de l'historique:", err);
+      toast.error("Impossible de charger l'historique des actions", { position: 'top-center' });
+    }
+  };
+
+  const formatMontant = (montant: number | undefined | null) => {
+    if (montant == null || isNaN(montant)) {
+      return "0.000";
+    }
+    return montant.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  };
+
   const filteredUsers = users.filter(user =>
     (user.username?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
@@ -94,7 +136,7 @@ export const UserList = () => {
       align: 'center',
       headerClassName: 'text-lg font-bold',
     },
-   {
+    {
       field: 'role',
       headerName: 'Rôle',
       width: 260,
@@ -104,17 +146,17 @@ export const UserList = () => {
       align: 'center',
       headerClassName: 'text-lg font-bold',
       renderCell: (params) => {
-        const roleName = params.value.roleName.toLowerCase(); 
+        const roleName = params.value.roleName.toLowerCase();
         let icon = null;
         if (roleName === 'administrateur') {
-          icon = <AdminPanelSettingsIcon className="text-purple-600 mr-2"  sx={{fontSize : '21px'}}/>;
-        } else if (roleName === 'gestionnaire') {
-          icon = <MonitorIcon className="text-red-600 mr-2" sx={{fontSize : '21px'}}/>;
+          icon = <AdminPanelSettingsIcon className="text-purple-600 mr-2" sx={{ fontSize: '21px' }} />;
+        } else if (roleName.includes('gestionnaire')) {
+          icon = <MonitorIcon className="text-red-600 mr-2" sx={{ fontSize: '21px' }} />;
         }
         return (
           <div className="flex items-center justify-center">
             {icon}
-            {params.value.roleName} 
+            {params.value.roleName}
           </div>
         );
       },
@@ -149,11 +191,53 @@ export const UserList = () => {
       headerAlign: 'center',
       align: 'center',
       headerClassName: 'text-lg font-bold',
-      renderCell: () => (
+      renderCell: (params) => (
         <div className="relative flex justify-center items-center h-full">
-          <button className="text-black hover:text-gray-800 text-2xl p-0.5 rounded-full">
+          <button
+            onClick={(event) => toggleMenu(params.row.userID, event)}
+            className="text-black hover:text-gray-800 text-2xl p-0.5 rounded-full"
+          >
             ...
           </button>
+          {openMenuId === params.row.userID && (
+            <div
+              className="absolute top-[100%] left-1/2 -translate-x-1/2 w-48 bg-white border rounded-md shadow-lg z-[1000] -mt-3"
+              style={{ minHeight: '40px' }}
+            >
+              <div className="py-1">
+                <button
+                  onClick={() => showUserHistory(params.row.userID)}
+                  className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
+                >
+                  Historique des actions
+                </button>
+                {params.row.userStatus.toLowerCase() === 'active' && (
+                  <button
+                    onClick={() => {
+                      setSelectedUserId(params.row.userID);
+                      setShowDeactivateModal(true);
+                      setOpenMenuId(null);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
+                  >
+                    Désactiver
+                  </button>
+                )}
+                {params.row.userStatus.toLowerCase() === 'inactive' && (
+                  <button
+                    onClick={() => {
+                      setSelectedUserId(params.row.userID);
+                      setShowActivateModal(true);
+                      setOpenMenuId(null);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
+                  >
+                    Activer
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       ),
     },
@@ -204,12 +288,12 @@ export const UserList = () => {
             ></path>
           </svg>
         </div>
-      <div className="flex-grow"></div>
+        <div className="flex-grow"></div>
         <button
-        onClick={handleOpenCreateModal}
-        className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-400 cursor-pointer flex items-center gap-2"
+          onClick={handleOpenCreateModal}
+          className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-400 cursor-pointer flex items-center gap-2"
         >
-        <PersonAddIcon /> Ajouter Utilisateur
+          <PersonAddIcon /> Ajouter Utilisateur
         </button>
       </div>
 
@@ -287,6 +371,322 @@ export const UserList = () => {
                 className={`px-4 py-2 rounded-lg ${isSubmitting ? 'bg-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
               >
                 {isSubmitting ? 'Création en cours...' : 'Créer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pour désactiver un utilisateur */}
+      {showDeactivateModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4 text-black text-center">
+              Voulez-vous désactiver cet utilisateur définitivement ?
+            </h3>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => {
+                  setShowDeactivateModal(false);
+                  setSelectedUserId(null);
+                }}
+                className="px-4 py-2 bg-gray-300 text-black rounded-lg hover:bg-gray-400"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={async () => {
+                  if (selectedUserId) {
+                    try {
+                      await handleDeactivateUser(selectedUserId);
+                      toast.success('Utilisateur désactivé', { position: 'top-center' });
+                    } catch (err: any) {
+                      toast.error(err.message || 'Erreur lors de la désactivation', { position: 'top-center' });
+                    }
+                  }
+                  setShowDeactivateModal(false);
+                  setSelectedUserId(null);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Oui
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pour activer un utilisateur */}
+      {showActivateModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4 text-black text-center">
+              Voulez-vous activer cet utilisateur ?
+            </h3>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => {
+                  setShowActivateModal(false);
+                  setSelectedUserId(null);
+                }}
+                className="px-4 py-2 bg-gray-300 text-black rounded-lg hover:bg-gray-400"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={async () => {
+                  if (selectedUserId) {
+                    try {
+                      await handleActivateUser(selectedUserId);
+                      toast.success('Utilisateur réactivé avec succès', { position: 'top-center' });
+                    } catch (err: any) {
+                      toast.error(err.message || 'Erreur lors de la réactivation', { position: 'top-center' });
+                    }
+                  }
+                  setShowActivateModal(false);
+                  setSelectedUserId(null);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Oui
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pour l'historique des actions */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-3xl w-full max-h-[80vh] overflow-y-auto text-black">
+            <div className="text-center mb-6 border-b border-gray-200 pb-3">
+              <h3 className="text-xl font-bold">Historique des Actions de l'Utilisateur</h3>
+            </div>
+
+            <div className="flex justify-around mb-4 bg-gray-200 text-black rounded-t-lg overflow-hidden">
+              <button
+                onClick={() => setSelectedHistoryType('createdPlans')}
+                className={`flex-1 p-2 text-center ${selectedHistoryType === 'createdPlans' ? 'bg-blue-500 text-white' : 'hover:bg-gray-300'}`}
+              >
+                Plans créés
+              </button>
+              <button
+                onClick={() => setSelectedHistoryType('validatedPlans')}
+                className={`flex-1 p-2 text-center ${selectedHistoryType === 'validatedPlans' ? 'bg-blue-500 text-white' : 'hover:bg-gray-300'}`}
+              >
+                Plans validés
+              </button>
+              <button
+                onClick={() => setSelectedHistoryType('declaredLitiges')}
+                className={`flex-1 p-2 text-center ${selectedHistoryType === 'declaredLitiges' ? 'bg-blue-500 text-white' : 'hover:bg-gray-300'}`}
+              >
+                Litiges déclarés
+              </button>
+              <button
+                onClick={() => setSelectedHistoryType('resolutedLitiges')}
+                className={`flex-1 p-2 text-center ${selectedHistoryType === 'resolutedLitiges' ? 'bg-blue-500 text-white' : 'hover:bg-gray-300'}`}
+              >
+                Litiges résolus
+              </button>
+              <button
+                onClick={() => setSelectedHistoryType('paidEcheances')}
+                className={`flex-1 p-2 text-center ${selectedHistoryType === 'paidEcheances' ? 'bg-blue-500 text-white' : 'hover:bg-gray-300'}`}
+              >
+                Paiement
+              </button>
+            </div>
+
+            {!userHistory ? (
+              <div className="text-center p-4">
+                <p>Aucune donnée d'historique disponible.</p>
+              </div>
+            ) : (
+              <>
+                {selectedHistoryType === 'createdPlans' && (
+                  <table className="w-full bg-white shadow rounded-lg overflow-hidden">
+                    <thead>
+                      <tr className="bg-blue-100">
+                        <th className="p-3 text-lg">Plan ID</th>
+                        <th className="p-3 text-lg">Date de création</th>
+                        <th className="p-3 text-lg">Montant a payer</th>
+                        <th className="p-3 text-lg">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {userHistory.createdPlans && userHistory.createdPlans.length > 0 ? (
+                        userHistory.createdPlans.map((plan: any) => (
+                          <tr key={plan.planID} className="border-t hover:bg-gray-50">
+                            <td className="p-2 text-center">{plan.planID}</td>
+                            <td className="p-2 text-center">
+                              {new Date(plan.creationDate).toLocaleDateString('fr-FR')}
+                            </td>
+                            <td className="p-2 text-center">{formatMontant(plan.montantRestant)} DT</td>
+                            <td className="p-2 text-center">{plan.planStatus}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-3 text-center">
+                            Aucun plan créé.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+
+                {selectedHistoryType === 'validatedPlans' && (
+                  <table className="w-full bg-white shadow rounded-lg overflow-hidden">
+                    <thead>
+                      <tr className="bg-blue-100">
+                        <th className="p-3 text-lg">Plan ID</th>
+                        <th className="p-3 text-lg">Date de création</th>
+                        <th className="p-3 text-lg">Montant total</th>
+                        <th className="p-3 text-lg">Montant restant</th>
+                        <th className="p-3 text-lg">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {userHistory.validatedPlans && userHistory.validatedPlans.length > 0 ? (
+                        userHistory.validatedPlans.map((plan: any) => (
+                          <tr key={plan.planID} className="border-t hover:bg-gray-50">
+                            <td className="p-2 text-center">{plan.planID}</td>
+                            <td className="p-2 text-center">
+                              {new Date(plan.creationDate).toLocaleDateString('fr-FR')}
+                            </td>
+                            <td className="p-2 text-center">{formatMontant(plan.montantTotal)} DT</td>
+                            <td className="p-2 text-center">{formatMontant(plan.montantRestant)} DT</td>
+                            <td className="p-2 text-center">{plan.planStatus}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-3 text-center">
+                            Aucun plan validé.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+
+                {selectedHistoryType === 'declaredLitiges' && (
+                  <table className="w-full bg-white shadow rounded-lg overflow-hidden">
+                    <thead>
+                      <tr className="bg-blue-100">
+                        <th className="p-3 text-lg">Litige ID</th>
+                        <th className="p-3 text-lg">Date de création</th>
+                        <th className="p-3 text-lg">Facture</th>
+                        <th className="p-3 text-lg">Type</th>
+                        <th className="p-3 text-lg">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {userHistory.declaredLitiges && userHistory.declaredLitiges.length > 0 ? (
+                        userHistory.declaredLitiges.map((litige: any) => (
+                          <tr key={litige.litigeID} className="border-t hover:bg-gray-50">
+                            <td className="p-2 text-center">{litige.litigeID}</td>
+                            <td className="p-2 text-center">
+                              {new Date(litige.creationDate).toLocaleDateString('fr-FR')}
+                            </td>
+                            <td className="p-2 text-center">{litige.facture.numFacture}</td>
+                            <td className="p-2 text-center">{litige.type.litigeTypeName}</td>
+                            <td className="p-2 text-center">{litige.litigeStatus}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-3 text-center">
+                            Aucun litige déclaré.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+
+                {selectedHistoryType === 'resolutedLitiges' && (
+                  <table className="w-full bg-white shadow rounded-lg overflow-hidden">
+                    <thead>
+                      <tr className="bg-blue-100">
+                        <th className="p-3 text-lg">Litige ID</th>
+                        <th className="p-1 text-lg">Date de résolution</th>
+                        <th className="p-3 text-lg">Facture</th>
+                        <th className="p-3 text-lg">Type</th>
+                        <th className="p-3 text-lg">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {userHistory.resolutedLitiges && userHistory.resolutedLitiges.length > 0 ? (
+                        userHistory.resolutedLitiges.map((litige: any) => (
+                          <tr key={litige.litigeID} className="border-t hover:bg-gray-50">
+                            <td className="p-2 text-center">{litige.litigeID}</td>
+                            <td className="p-2 text-center">
+                              {litige.resolutionDate
+                                ? new Date(litige.resolutionDate).toLocaleDateString('fr-FR')
+                                : 'N/A'}
+                            </td>
+                            <td className="p-2 text-center">{litige.facture.numFacture}</td>
+                            <td className="p-2 text-center">{litige.type.litigeTypeName}</td>
+                            <td className="p-2 text-center">{litige.litigeStatus}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-3 text-center">
+                            Aucun litige résolu.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+
+                {selectedHistoryType === 'paidEcheances' && (
+                  <table className="w-full bg-white shadow rounded-lg overflow-hidden">
+                    <thead>
+                      <tr className="bg-blue-100">
+                        <th className="p-3 text-lg">Paiement ID</th>
+                        <th className="p-3 text-lg">Échéance ID</th>
+                        <th className="p-3 text-lg">Date de paiement</th>
+                        <th className="p-3 text-lg">Montant payé</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {userHistory.paidEcheances && userHistory.paidEcheances.length > 0 ? (
+                        userHistory.paidEcheances.map((paiement: any) => (
+                          <tr key={paiement.paiementID} className="border-t hover:bg-gray-50">
+                            <td className="p-2 text-center">{paiement.paiementID}</td>
+                            <td className="p-2 text-center">{paiement.paiementDateID}</td>
+                            <td className="p-2 text-center">
+                              {new Date(paiement.dateDePaiement).toLocaleDateString('fr-FR')}
+                            </td>
+                            <td className="p-2 text-center">{formatMontant(paiement.montantPayee)} DT</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="p-3 text-center">
+                            Aucune échéance payée.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </>
+            )}
+
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={() => {
+                  setShowHistoryModal(false);
+                  setUserHistory(null);
+                  setSelectedHistoryType('createdPlans');
+                }}
+                className="px-8 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 cursor-pointer"
+              >
+                Fermer
               </button>
             </div>
           </div>

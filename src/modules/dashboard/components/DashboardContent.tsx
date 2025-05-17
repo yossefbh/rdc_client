@@ -536,6 +536,14 @@ const factureStatusChartData: ChartData<"pie", number[], string> = {
 
   return (
     <main className="flex-1 bg-gradient-to-br from-gray-50 to-gray-200 p-8 h-screen overflow-auto">
+            {selected === 'menu' && (
+            <div className="text-center">
+              <h1 className="text-4xl font-extrabold mb-10  text-cyan-600">Bienvenue dans notre site</h1>
+                <p className="text-xl text-cyan-600 py-2">Nous vous souhaitons une expérience exceptionnelle !</p>
+              <p className="text-xl text-black py-4">Visitez la page À Propos pour découvrir le fonctionnement de notre site.</p>
+              <p className="text-xl text-black py-2">Consultez la page Aide pour nous contacter si vous avez besoin d'assistance.</p>
+            </div>
+            )}
       {selected.startsWith('accueil') && (
         <>
           <h1 className="text-4xl font-extrabold mb-6 text-center text-blue-500">

@@ -386,42 +386,51 @@ export const FactureList = () => {
   };
 
   const handleSubmitLitige = async () => {
-    if (!selectedFactureId || litigeTypeId === null || !litigeDescription) {
-      toast.error("Veuillez remplir tous les champs obligatoires.", { autoClose: 3000 });
+  if (!selectedFactureId || litigeTypeId === null || !litigeDescription) {
+    toast.error("Veuillez remplir tous les champs obligatoires.", { autoClose: 3000 });
+    return;
+  }
+
+  setIsSubmitting(true);
+  try {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const userID = userData.userID || 0;
+    if (userID === 0) {
+      toast.error("Utilisateur non identifié. Redirection vers la connexion...", { autoClose: 3000 });
+      setTimeout(() => {
+        window.location.href = '/auth/login'; 
+      }, 3000);
       return;
     }
+    const litigeData = {
+      factureID: selectedFactureId,
+      typeID: litigeTypeId,
+      litigeDescription: litigeDescription,
+      declaredByUserID: userID, 
+    };
 
-    setIsSubmitting(true);
-    try {
-      const litigeData = {
-        factureID: selectedFactureId,
-        typeID: litigeTypeId,
-        litigeDescription: litigeDescription,
-      };
+    const litigeID = await createLitige(litigeData,userID);
 
-      const litigeID = await createLitige(litigeData);
-
-      if (litigeFiles.length > 0) {
-        await uploadLitigeFiles(litigeID, litigeFiles);
-        toast.success("Litige créé et pièces jointes envoyées avec succès !", { autoClose: 3000 });
-      } else {
-        toast.success("Litige créé avec succès !", { autoClose: 3000 });
-      }
-
-      setShowLitigeModal(false);
-      setSelectedFactureId(null);
-      setLitigeTypeId(null);
-      setLitigeDescription("");
-      setLitigeFiles([]);
-      getFactures().then(setFactures).catch(console.error);
-    } catch (error) {
-      console.error("Erreur lors de la création du litige ou de l'envoi des pièces jointes:", error);
-      toast.error("Une erreur est survenue lors de la soumission du litige.", { autoClose: 3000 });
-    } finally {
-      setIsSubmitting(false);
+    if (litigeFiles.length > 0) {
+      await uploadLitigeFiles(litigeID, litigeFiles);
+      toast.success("Litige créé et pièces jointes envoyées avec succès !", { autoClose: 3000 });
+    } else {
+      toast.success("Litige créé avec succès !", { autoClose: 3000 });
     }
-  };
 
+    setShowLitigeModal(false);
+    setSelectedFactureId(null);
+    setLitigeTypeId(null);
+    setLitigeDescription("");
+    setLitigeFiles([]);
+    getFactures().then(setFactures).catch(console.error);
+  } catch (error) {
+    console.error("Erreur lors de la création du litige ou de l'envoi des pièces jointes:", error);
+    toast.error("Une erreur est survenue lors de la soumission du litige.", { autoClose: 3000 });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   const columns: GridColDef[] = [
     {
       field: 'numFacture',

@@ -31,11 +31,10 @@ export default function Login() {
       const data = await response.json();
       console.log('Response data:', data);
 
-      if (response.ok) {
-        localStorage.setItem('user', JSON.stringify(data));
-        toast.success('Connexion réussie !', { position: 'top-center' });
-        setTimeout(() => router.push('/'), 2000);
-      } else {
+     if (response.ok) {
+     localStorage.setItem('user', JSON.stringify(data));
+     router.push('/');
+     } else {
         const error = data.error;
         if (error === 'Incorrect password.') {
           toast.error('Mot de passe incorrect.', { position: 'top-center' });

@@ -122,9 +122,65 @@ export const createUser = async (userData: CreateUserRequest): Promise<any> => {
       return data; 
     } else {
       const errorText = await response.text();
-      return { error: errorText, status: response.status }; // Retourne un objet avec l'erreur et le statut
+      return { error: errorText, status: response.status }; 
     }
   } catch (error: any) {
     throw new Error('Erreur réseau ou serveur lors de la création de l\'utilisateur');
+  }
+};
+export const getUserHistory = async (userID: number): Promise<any> => {
+  try {
+    const response = await fetch(`https://localhost:7284/api/Users/${userID}/Actions`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur lors de la récupération de l’historique de l’utilisateur: ${errorText}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Erreur réseau ou parsing pour userID ${userID}:`, error);
+    throw error;
+  }
+};
+export const deactivateUser = async (userID: number): Promise<any> => {
+  try {
+    const response = await fetch(`https://localhost:7284/api/Users/Desactivate/${userID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur lors de la désactivation de l’utilisateur: ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`Erreur réseau ou parsing pour userID ${userID}:`, error);
+    throw error;
+  }
+};
+
+export const activateUser = async (userID: number): Promise<any> => {
+  try {
+    const response = await fetch(`https://localhost:7284/api/Users/Reactivate/${userID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur lors de la réactivation de l’utilisateur: ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`Erreur réseau ou parsing pour userID ${userID}:`, error);
+    throw error;
   }
 };

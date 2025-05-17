@@ -148,24 +148,6 @@ export const DashboardSidebar = ({ onSelect }: Props) => {
             Litiges
           </li>
           <li
-            onClick={() => handleItemClick('aide')}
-            className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
-              selectedItem === 'aide' ? 'font-bold text-blue-500' : ''
-            }`}
-          >
-            <FaQuestionCircle className="mr-3" />
-            Aide
-          </li>
-          <li
-            onClick={() => handleItemClick('aPropos')}
-            className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
-              selectedItem === 'aPropos' ? 'font-bold text-blue-500' : ''
-            }`}
-          >
-            <FaInfoCircle className="mr-3" />
-            À Propos
-          </li>
-          <li
             className={`flex items-center cursor-pointer hover:text-blue-300 text-lg ${
               selectedItem === 'roles' || selectedItem === 'permissions' ? 'font-bold text-blue-400' : ''
             }`}
@@ -206,6 +188,24 @@ export const DashboardSidebar = ({ onSelect }: Props) => {
             <FaUser className="mr-3" />
             Utilisateurs
           </li>
+          <li
+            onClick={() => handleItemClick('aide')}
+            className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
+              selectedItem === 'aide' ? 'font-bold text-blue-500' : ''
+            }`}
+          >
+            <FaQuestionCircle className="mr-3" />
+            Aide
+          </li>
+          <li
+            onClick={() => handleItemClick('aPropos')}
+            className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
+              selectedItem === 'aPropos' ? 'font-bold text-blue-500' : ''
+            }`}
+          >
+            <FaInfoCircle className="mr-3" />
+            À Propos
+          </li>
         </ul>
         {user && (
           <div className="mt-7 relative">
@@ -213,10 +213,10 @@ export const DashboardSidebar = ({ onSelect }: Props) => {
               className="p-3 bg-blue-700 rounded-lg border-blue-600 cursor-pointer hover:bg-blue-800 flex items-center "
               onClick={() => setShowLogout(!showLogout)}
             >
-              <FaUser className="mr-1  text-white text-4xl" />
+              <FaUser className="mr-1  text-white text-3xl" />
               <div>
                 <p className="font-semibold">User : {user.username}</p>
-                <p className="px-3 font-bold">{user.role?.roleName || 'Non défini'}</p>
+                <p className="px-2 font-bold">{user.role?.roleName || 'Non défini'}</p>
               </div>
             </div>
             {showLogout && (

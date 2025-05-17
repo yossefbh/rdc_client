@@ -60,9 +60,9 @@ export const useLitiges = () => {
     }
   };
 
-  const reject = async (litigeID: number) => {
+  const reject = async (litigeID: number, userID: number) => {
     try {
-      await rejectLitige(litigeID);
+      await rejectLitige(litigeID, userID);
       setLitiges(
         litiges.map((litige) =>
           litige.litigeID === litigeID ? { ...litige, litigeStatus: "REJETE" } : litige
@@ -76,10 +76,11 @@ export const useLitiges = () => {
 
   const correct = async (
     litigeID: number,
-    correctedData: { correctedMontantTotal: number; correctedAmountDue: number }
+    correctedData: { correctedMontantTotal: number; correctedAmountDue: number },
+    userID: number
   ) => {
     try {
-      await correctAmount(litigeID, correctedData);
+      await correctAmount(litigeID, correctedData, userID);
       setLitiges(
         litiges.map((litige) =>
           litige.litigeID === litigeID
@@ -101,9 +102,9 @@ export const useLitiges = () => {
     }
   };
 
-  const resolveDuplicatedLitige = async (litigeID: number) => {
+  const resolveDuplicatedLitige = async (litigeID: number, userID: number) => {
     try {
-      const responseText = await resolveDuplicated(litigeID);
+      const responseText = await resolveDuplicated(litigeID, userID);
       if (responseText.includes("is resolved")) {
         setLitiges(
           litiges.map((litige) =>

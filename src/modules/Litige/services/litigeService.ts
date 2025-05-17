@@ -4,7 +4,6 @@ const API_URL = "https://localhost:7284/api/LitigeTypes";
 const LITIGES_API_URL = "https://localhost:7284/api/Litiges/All";
 const CREATE_LITIGE_API_URL = "https://localhost:7284/api/Litiges";
 
-// Récupérer les types de litiges
 export const getLitigeTypes = async (): Promise<LitigeType[]> => {
   try {
     const response = await fetch(API_URL);
@@ -19,7 +18,6 @@ export const getLitigeTypes = async (): Promise<LitigeType[]> => {
   }
 };
 
-// Créer un type de litige
 export const createLitigeType = async (litigeType: Omit<LitigeType, "litigeTypeID">): Promise<LitigeType> => {
   try {
     const response = await fetch(API_URL, {
@@ -42,7 +40,6 @@ export const createLitigeType = async (litigeType: Omit<LitigeType, "litigeTypeI
   }
 };
 
-// Modifier un type de litige
 export const updateLitigeType = async (litigeType: LitigeType): Promise<LitigeType> => {
   try {
     const response = await fetch(`${API_URL}/${litigeType.litigeTypeID}`, {
@@ -65,7 +62,6 @@ export const updateLitigeType = async (litigeType: LitigeType): Promise<LitigeTy
   }
 };
 
-// Récupérer tous les litiges
 export const getLitiges = async (): Promise<Litige[]> => {
   try {
     const response = await fetch(LITIGES_API_URL);
@@ -80,15 +76,19 @@ export const getLitiges = async (): Promise<Litige[]> => {
   }
 };
 
-// Créer un litige et retourner l'ID du litige créé
-export const createLitige = async (litigeData: { factureID: number; typeID: number; litigeDescription: string }): Promise<number> => {
+export const createLitige = async (litigeData: { factureID: number; typeID: number; litigeDescription: string }, userID: number): Promise<number> => {
   try {
     const response = await fetch(CREATE_LITIGE_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(litigeData),
+      body: JSON.stringify({
+        factureID: litigeData.factureID,
+        typeID: litigeData.typeID,
+        litigeDescription: litigeData.litigeDescription,
+        declaredByUserID: userID,
+      }),
     });
 
     if (!response.ok) {
@@ -138,34 +138,48 @@ export const uploadLitigeFiles = async (litigeID: number, files: File[]): Promis
   }
 };
 
-// Rejeter un litige
-export const rejectLitige = async (litigeID: number): Promise<void> => {
+export const rejectLitige = async (litigeID: number, userID: number): Promise<string> => {
   try {
-    const response = await fetch(`https://localhost:7284/api/Litiges/RejectLitige/${litigeID}`, {
+    const response = await fetch(`https://localhost:7284/api/Litiges/RejectLitige`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "*/*",
       },
+      body: JSON.stringify({
+        litigeID,
+        rejectedByUserID: userID,
+      }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Erreur lors du rejet du litige: ${errorText}`);
     }
+
+    return await response.text();
   } catch (error) {
     console.error("Erreur dans rejectLitige :", error);
     throw error;
   }
 };
 
-export const correctAmount = async (litigeID: number, correctedData: { correctedMontantTotal: number; correctedAmountDue: number }): Promise<void> => {
+export const correctAmount = async (
+  litigeID: number,
+  correctedData: { correctedMontantTotal: number; correctedAmountDue: number },
+  userID: number
+): Promise<void> => {
   try {
     const response = await fetch(`https://localhost:7284/api/Litiges/CorrectAmount/${litigeID}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(correctedData),
+      body: JSON.stringify({
+        correctedMontantTotal: correctedData.correctedMontantTotal,
+        correctedAmountDue: correctedData.correctedAmountDue,
+        correctedByUserID: userID,
+      }),
     });
 
     if (!response.ok) {
@@ -178,13 +192,18 @@ export const correctAmount = async (litigeID: number, correctedData: { corrected
   }
 };
 
-export const resolveDuplicated = async (litigeID: number): Promise<string> => {
+export const resolveDuplicated = async (litigeID: number, userID: number): Promise<string> => {
   try {
-    const response = await fetch(`https://localhost:7284/api/Litiges/ResolveDuplicated/${litigeID}`, {
+    const response = await fetch(`https://localhost:7284/api/Litiges/ResolveDuplicated`, {
       method: "PUT",
       headers: {
+        "Content-Type": "application/json",
         "Accept": "*/*",
       },
+      body: JSON.stringify({
+        litigeID,
+        resolvedByUserID: userID,
+      }),
     });
 
     if (!response.ok) {
@@ -198,6 +217,7 @@ export const resolveDuplicated = async (litigeID: number): Promise<string> => {
     throw error;
   }
 };
+
 export const getJustificatifLinks = async (litigeID: number): Promise<{ nomFichier: string; downloadUrl: string }[]> => {
   try {
     const response = await fetch(`https://localhost:7284/api/Litiges/${litigeID}/justificatifs/links`, {

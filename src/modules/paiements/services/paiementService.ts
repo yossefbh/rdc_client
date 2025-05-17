@@ -5,14 +5,32 @@ export const createPlanPaiement = async (planData: {
   nombreDeEcheances: number;
   factureIDs: number[];
   hasAdvance: boolean;
+  createdByUserID?: number; // Rendu optionnel
 }) => {
   try {
+    // Récupérer userID depuis localStorage
+    let userData;
+    try {
+      const rawUserData = localStorage.getItem('user');
+      userData = rawUserData ? JSON.parse(rawUserData) : {};
+    } catch (e) {
+      userData = {};
+      console.error("Erreur lors du parsing de localStorage 'user':", e);
+    }
+    const userID = userData.userID || 0;
+
+    // Ajouter createdByUserID au planData
+    const updatedPlanData = {
+      ...planData,
+      createdByUserID: userID,
+    };
+
     const response = await fetch("https://localhost:7284/api/PlanDePaiement", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(planData),
+      body: JSON.stringify(updatedPlanData),
     });
 
     if (!response.ok) {
@@ -21,15 +39,16 @@ export const createPlanPaiement = async (planData: {
     }
 
     const result = await response.json();
+    console.log("Réponse brute de l'API (createPlanPaiement):", result); // Log pour débogage
     if (typeof result === "number") {
       return { planID: result };
     }
     return result;
   } catch (error) {
+    console.error("Erreur dans createPlanPaiement :", error);
     throw error;
   }
 };
-
 export const createPaiementDates = async (paiementDates: {
   paiementDates: {
     planID: number;
@@ -80,24 +99,48 @@ export const payerEcheance = async (paymentData: {
   montantPayee: number;
   dateDePaiement: string;
 }): Promise<number | void> => {
-  const response = await fetch("https://localhost:7284/api/Paiement", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(paymentData),
-  });
-
-  if (!response.ok) {
-    throw new Error("Erreur lors du paiement");
-  }
-
-  const contentType = response.headers.get("Content-Type");
-  if (contentType && contentType.includes("application/json")) {
-    const result = await response.json();
-    if (typeof result === "number") {
-      return result; 
+  try {
+    // Récupérer paidByUserID depuis localStorage
+    let userData;
+    try {
+      const rawUserData = localStorage.getItem('user');
+      userData = rawUserData ? JSON.parse(rawUserData) : {};
+    } catch (e) {
+      userData = {};
+      console.error("Erreur lors du parsing de localStorage 'user':", e);
     }
+    const paidByUserID = userData.userID || 0;
+
+    // Préparer le body avec paidByUserID ajouté
+    const requestBody = {
+      paiementDateID: paymentData.paiementDateID,
+      montantPayee: paymentData.montantPayee,
+      paidByUserID: paidByUserID,
+      dateDePaiement: paymentData.dateDePaiement,
+    };
+
+    const response = await fetch("https://localhost:7284/api/Paiement", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error("Erreur lors du paiement");
+    }
+
+    const contentType = response.headers.get("Content-Type");
+    if (contentType && contentType.includes("application/json")) {
+      const result = await response.json();
+      if (typeof result === "number") {
+        return result; 
+      }
+    }
+  } catch (error) {
+    console.error("Erreur dans payerEcheance :", error);
+    throw error;
   }
 };
 
@@ -130,11 +173,29 @@ export const lockPlanPaiement = async (planID: number): Promise<void> => {
 
 export const activatePlanPaiement = async (planID: number): Promise<void> => {
   try {
-    const response = await fetch(`https://localhost:7284/api/PlanDePaiement/Activate/${planID}`, {
+    // Récupérer activatedByUserID depuis localStorage
+    let userData;
+    try {
+      const rawUserData = localStorage.getItem('user');
+      userData = rawUserData ? JSON.parse(rawUserData) : {};
+    } catch (e) {
+      userData = {};
+      console.error("Erreur lors du parsing de localStorage 'user':", e);
+    }
+    const userID = userData.userID || 0;
+
+    // Créer le body de la requête
+    const requestBody = {
+      planID: planID,
+      activatedByUserID: userID,
+    };
+
+    const response = await fetch(`https://localhost:7284/api/PlanDePaiement/Activate`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
+      body: JSON.stringify(requestBody), 
     });
 
     if (!response.ok) {

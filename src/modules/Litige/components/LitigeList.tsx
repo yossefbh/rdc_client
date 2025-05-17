@@ -116,14 +116,35 @@ export const LitigeList = () => {
   };
 
   const handleRejectLitige = async (litigeID: number) => {
+    if (!litigeID || litigeID <= 0) {
+      toast.error("ID du litige invalide.", { autoClose: 3000 });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await reject(litigeID);
+      let userData;
+      try {
+        const rawUserData = JSON.parse(localStorage.getItem('user') || '{}');
+        userData = rawUserData; // Direct assignment since it's an object
+        console.log("Parsed user data:", userData); // Debug log
+      } catch (e) {
+        userData = {};
+        console.error("Erreur lors du parsing de localStorage 'user':", e);
+      }
+      const userID = userData.userID || 0;
+      if (userID <= 0) {
+        toast.error("Utilisateur non identifié. Redirection vers la connexion...", { autoClose: 3000 });
+        return;
+      }
+
+      await reject(litigeID, userID);
       toast.success("Litige rejeté avec succès !", { autoClose: 3000 });
       setShowResolutionModal(false);
       setSelectedLitige(null);
       setIsJustified(null);
     } catch (err) {
+      console.error("Erreur lors du rejet du litige:", err);
       toast.error("Erreur lors du rejet du litige.", { autoClose: 3000 });
     } finally {
       setIsSubmitting(false);
@@ -131,6 +152,11 @@ export const LitigeList = () => {
   };
 
   const handleCorrectAmount = async (litigeID: number) => {
+    if (!litigeID || litigeID <= 0) {
+      toast.error("ID du litige invalide.", { autoClose: 3000 });
+      return;
+    }
+
     const montantTotal = parseFloat(correctedData.correctedMontantTotal);
     const amountDue = parseFloat(correctedData.correctedAmountDue);
 
@@ -151,16 +177,35 @@ export const LitigeList = () => {
 
     setIsSubmitting(true);
     try {
+      let userData;
+      try {
+        const rawUserData = JSON.parse(localStorage.getItem('user') || '{}');
+        userData = rawUserData; 
+        console.log("Parsed user data:", userData); // Debug log
+      } catch (e) {
+        userData = {};
+        console.error("Erreur lors du parsing de localStorage 'user':", e);
+      }
+      const userID = userData.userID || 0;
+      if (userID <= 0) {
+        toast.error("Utilisateur non identifié. Redirection vers la connexion...", { autoClose: 3000 });
+        setTimeout(() => {
+          window.location.href = '/auth/login';
+        }, 3000);
+        return;
+      }
+
       await correct(litigeID, {
         correctedMontantTotal: montantTotal,
         correctedAmountDue: amountDue,
-      });
+      }, userID);
       toast.success("Montants corrigés avec succès !", { autoClose: 3000 });
       setShowResolutionModal(false);
       setSelectedLitige(null);
       setIsJustified(null);
       setCorrectedData({ correctedMontantTotal: "", correctedAmountDue: "" });
     } catch (err) {
+      console.error("Erreur lors de la correction des montants:", err);
       toast.error("Erreur lors de la correction des montants.", { autoClose: 3000 });
     } finally {
       setIsSubmitting(false);
@@ -174,6 +219,10 @@ export const LitigeList = () => {
 
   const handleShowDetails = async (litige: Litige, event: React.MouseEvent) => {
     event.stopPropagation();
+    if (!litige?.litigeID || litige.litigeID <= 0) {
+      toast.error("ID du litige invalide.", { autoClose: 3000 });
+      return;
+    }
     setSelectedLitige(litige);
     setShowDetailsModal(true);
     setOpenDropdownId(null);
@@ -214,44 +263,70 @@ export const LitigeList = () => {
     }
   };
 
-  const handleShowResolution = async (litige: Litige, event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (litige.litigeStatus === "RESOLU" || litige.litigeStatus === "REJETE") {
-      toast.error("Ce litige est déjà résolu ou rejeté et ne peut pas être modifié.", { autoClose: 3000 });
-      return;
-    }
+const handleShowResolution = async (litige: Litige, event: React.MouseEvent) => {
+  event.stopPropagation();
+  if (!litige?.litigeID || litige.litigeID <= 0) {
+    toast.error("ID du litige invalide.", { autoClose: 3000 });
+    return;
+  }
+  if (litige.litigeStatus === "RESOLU" || litige.litigeStatus === "REJETE") {
+    toast.error("Ce litige est déjà résolu ou rejeté et ne peut pas être modifié.", { autoClose: 3000 });
+    return;
+  }
 
-    if (litige.type?.litigeTypeName === "DUPLIQUE") {
-      setIsSubmitting(true);
+  if (litige.type?.litigeTypeName === "DUPLIQUE") {
+    setIsSubmitting(true);
+    try {
+      let userData;
       try {
-        toast.info("Vérification...", { autoClose: false });
-        const result = await resolveDuplicated(litige.litigeID);
-        await delay(1000);
-        toast.dismiss();
-
-        if (result === "resolved") {
-          toast.success("Litige résolu avec succès !", { autoClose: 3000 });
-        } else if (result === "rejected") {
-          toast.error("Pas de duplication sur cette facture .", { autoClose: 3000 });
-        }
-
-        await refresh();
-      } catch (err) {
-        await delay(1000);
-        toast.dismiss();
-        toast.error("Erreur lors de la résolution du litige DUPLIQUE.", { autoClose: 3000 });
-      } finally {
-        setIsSubmitting(false);
+        const rawUserData = localStorage.getItem('user');
+        userData = rawUserData ? JSON.parse(rawUserData) : {};
+      } catch (e) {
+        userData = {};
+        console.error("Erreur lors du parsing de localStorage 'user':", e);
       }
-    } else {
-      setSelectedLitige(litige);
-      setShowResolutionModal(true);
-      setOpenDropdownId(null);
-      setIsJustified(null);
-      setCorrectedData({ correctedMontantTotal: "", correctedAmountDue: "" });
-    }
-  };
+      const userID = userData.userID || 0;
+      if (userID <= 0) {
+        toast.error("Utilisateur non identifié. Redirection vers la connexion...", { autoClose: 3000 });
+        setTimeout(() => {
+          window.location.href = '/auth/login';
+        }, 3000);
+        return;
+      }
 
+      console.log("Appel à resolveDuplicated avec litigeID:", litige.litigeID, "et userID:", userID);
+
+      toast.info("Vérification...", { autoClose: false });
+      const result = await resolveDuplicated(litige.litigeID, userID);
+      console.log("Réponse de l'API ResolveDuplicated:", result);
+
+      await delay(1000);
+      toast.dismiss();
+
+      if (result === "resolved") {
+        toast.success("Litige résolu avec succès !", { autoClose: 3000 });
+      } else if (result === "rejected") {
+        toast.info("Pas de duplication sur cette facture.", { autoClose: 3000 }); 
+      } else {
+        throw new Error("Réponse inattendue de l'API : " + (result || "Aucune réponse"));
+      }
+
+      await refresh();
+    } catch (err) {
+      await delay(1000);
+      toast.dismiss();
+      toast.error("Erreur lors de la résolution du litige DUPLIQUE : " + (err instanceof Error ? err.message : "Erreur inconnue"), { autoClose: 3000 });
+    } finally {
+      setIsSubmitting(false);
+    }
+  } else {
+    setSelectedLitige(litige);
+    setShowResolutionModal(true);
+    setOpenDropdownId(null);
+    setIsJustified(null);
+    setCorrectedData({ correctedMontantTotal: "", correctedAmountDue: "" });
+  }
+};
   const columns: GridColDef<Litige>[] = [
     {
       field: 'rowNumber',

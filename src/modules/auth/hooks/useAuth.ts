@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Permission, Role, User } from '../types/Interface';
-import { getPermissions, getRoles, getRoleById, createRole, updateRole, getUsers, createUser } from '../services/AuthService';
+import { getPermissions, getRoles, getRoleById, createRole, updateRole, getUsers, createUser, getUserHistory, deactivateUser, activateUser } from '../services/AuthService';
 
 export const useAuth = () => {
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -42,7 +42,7 @@ export const useAuth = () => {
       setUsers(data);
     } catch (err) {
       setError('Erreur lors de la récupération des utilisateurs');
-      throw err; 
+      throw err;
     }
   };
 
@@ -60,12 +60,29 @@ export const useAuth = () => {
     }
   };
 
+  const fetchUserHistory = async (userID: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getUserHistory(userID);
+      if (!response || typeof response !== 'object' || Object.keys(response).length === 0) {
+        return null;
+      }
+      return response;
+    } catch (err) {
+      setError('Erreur lors de la récupération de l’historique de l’utilisateur');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateRole = async (roleData: any) => {
     setLoading(true);
     setError(null);
     try {
       await createRole(roleData);
-      await fetchRoles(); 
+      await fetchRoles();
     } catch (err) {
       setError('Erreur lors de la création du rôle');
       throw err;
@@ -79,7 +96,7 @@ export const useAuth = () => {
     setError(null);
     try {
       await updateRole(id, roleData);
-      await fetchRoles(); 
+      await fetchRoles();
     } catch (err) {
       setError('Erreur lors de la mise à jour du rôle');
       throw err;
@@ -93,9 +110,9 @@ export const useAuth = () => {
     try {
       const response = await createUser(userData);
       if (response && typeof response === 'object' && 'error' in response && response.status === 409) {
-        return response.error; 
+        return response.error;
       } else if (typeof response === 'number') {
-        fetchUsers(); 
+        fetchUsers();
         return response;
       } else {
         throw new Error('Erreur inattendue lors de la création de l\'utilisateur');
@@ -103,6 +120,44 @@ export const useAuth = () => {
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la création de l\'utilisateur');
       throw err;
+    }
+  };
+
+  const handleDeactivateUser = async (userID: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await deactivateUser(userID);
+      if (response.success && response.data) {
+        await fetchUsers();
+        return response;
+      } else {
+        throw new Error('Échec de la désactivation de l\'utilisateur');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la désactivation de l\'utilisateur');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleActivateUser = async (userID: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await activateUser(userID);
+      if (response.success && response.data) {
+        await fetchUsers();
+        return response;
+      } else {
+        throw new Error('Échec de la réactivation de l\'utilisateur');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la réactivation de l\'utilisateur');
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -116,8 +171,11 @@ export const useAuth = () => {
     fetchRoles,
     fetchUsers,
     fetchRoleById,
+    fetchUserHistory,
     handleCreateRole,
     handleUpdateRole,
     handleCreateUser,
+    handleDeactivateUser,
+    handleActivateUser,
   };
 };
