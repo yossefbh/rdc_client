@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Permission, Role, User } from '../types/Interface';
-import { getPermissions, getRoles, getRoleById, createRole, updateRole, getUsers, createUser, getUserHistory, deactivateUser, activateUser } from '../services/AuthService';
+import { getPermissions, getRoles, getRoleById, createRole, updateRole, getUsers, createUser, getUserHistory, deactivateUser, activateUser, updateUserRole } from '../services/AuthService';
 
 export const useAuth = () => {
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -161,6 +161,25 @@ export const useAuth = () => {
     }
   };
 
+  const handleUpdateUserRole = async (userID: number, roleID: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const success = await updateUserRole(userID, roleID);
+      if (success) {
+        await fetchUsers(); 
+        return true;
+      } else {
+        throw new Error('Échec de la mise à jour du rôle de l\'utilisateur');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la mise à jour du rôle de l\'utilisateur');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     permissions,
     roles,
@@ -177,5 +196,6 @@ export const useAuth = () => {
     handleCreateUser,
     handleDeactivateUser,
     handleActivateUser,
+    handleUpdateUserRole,
   };
 };

@@ -44,9 +44,9 @@ export const LitigeList = () => {
   });
   const [justificatifs, setJustificatifs] = useState<{ nomFichier: string; downloadUrl: string }[]>([]);
   const [loadingJustificatifs, setLoadingJustificatifs] = useState(false);
-
   const [selectedAcheteurId, setSelectedAcheteurId] = useState<number | null>(null);
   const [acheteurs, setAcheteurs] = useState<Acheteur[]>([]);
+  const [userPermissions, setUserPermissions] = useState<any>(null);
 
   useEffect(() => {
     const fetchAcheteurs = async () => {
@@ -61,7 +61,22 @@ export const LitigeList = () => {
       }
     };
     fetchAcheteurs();
+
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUserPermissions(JSON.parse(storedUser));
+    }
   }, [litiges]);
+
+  const hasLitigeManagementWritePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des litiges" && perm.canWrite
+  );
+
+  const hasLitigeManagementReadPermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des litiges" && perm.canRead
+  );
 
   const validLitiges = litiges
     .filter((litige): litige is Litige => {
@@ -126,8 +141,8 @@ export const LitigeList = () => {
       let userData;
       try {
         const rawUserData = JSON.parse(localStorage.getItem('user') || '{}');
-        userData = rawUserData; // Direct assignment since it's an object
-        console.log("Parsed user data:", userData); // Debug log
+        userData = rawUserData; 
+        console.log("Parsed user data:", userData);
       } catch (e) {
         userData = {};
         console.error("Erreur lors du parsing de localStorage 'user':", e);
@@ -181,7 +196,7 @@ export const LitigeList = () => {
       try {
         const rawUserData = JSON.parse(localStorage.getItem('user') || '{}');
         userData = rawUserData; 
-        console.log("Parsed user data:", userData); // Debug log
+        console.log("Parsed user data:", userData); 
       } catch (e) {
         userData = {};
         console.error("Erreur lors du parsing de localStorage 'user':", e);
@@ -263,70 +278,71 @@ export const LitigeList = () => {
     }
   };
 
-const handleShowResolution = async (litige: Litige, event: React.MouseEvent) => {
-  event.stopPropagation();
-  if (!litige?.litigeID || litige.litigeID <= 0) {
-    toast.error("ID du litige invalide.", { autoClose: 3000 });
-    return;
-  }
-  if (litige.litigeStatus === "RESOLU" || litige.litigeStatus === "REJETE") {
-    toast.error("Ce litige est déjà résolu ou rejeté et ne peut pas être modifié.", { autoClose: 3000 });
-    return;
-  }
-
-  if (litige.type?.litigeTypeName === "DUPLIQUE") {
-    setIsSubmitting(true);
-    try {
-      let userData;
-      try {
-        const rawUserData = localStorage.getItem('user');
-        userData = rawUserData ? JSON.parse(rawUserData) : {};
-      } catch (e) {
-        userData = {};
-        console.error("Erreur lors du parsing de localStorage 'user':", e);
-      }
-      const userID = userData.userID || 0;
-      if (userID <= 0) {
-        toast.error("Utilisateur non identifié. Redirection vers la connexion...", { autoClose: 3000 });
-        setTimeout(() => {
-          window.location.href = '/auth/login';
-        }, 3000);
-        return;
-      }
-
-      console.log("Appel à resolveDuplicated avec litigeID:", litige.litigeID, "et userID:", userID);
-
-      toast.info("Vérification...", { autoClose: false });
-      const result = await resolveDuplicated(litige.litigeID, userID);
-      console.log("Réponse de l'API ResolveDuplicated:", result);
-
-      await delay(1000);
-      toast.dismiss();
-
-      if (result === "resolved") {
-        toast.success("Litige résolu avec succès !", { autoClose: 3000 });
-      } else if (result === "rejected") {
-        toast.info("Pas de duplication sur cette facture.", { autoClose: 3000 }); 
-      } else {
-        throw new Error("Réponse inattendue de l'API : " + (result || "Aucune réponse"));
-      }
-
-      await refresh();
-    } catch (err) {
-      await delay(1000);
-      toast.dismiss();
-      toast.error("Erreur lors de la résolution du litige DUPLIQUE : " + (err instanceof Error ? err.message : "Erreur inconnue"), { autoClose: 3000 });
-    } finally {
-      setIsSubmitting(false);
+  const handleShowResolution = async (litige: Litige, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!litige?.litigeID || litige.litigeID <= 0) {
+      toast.error("ID du litige invalide.", { autoClose: 3000 });
+      return;
     }
-  } else {
-    setSelectedLitige(litige);
-    setShowResolutionModal(true);
-    setOpenDropdownId(null);
-    setIsJustified(null);
-    setCorrectedData({ correctedMontantTotal: "", correctedAmountDue: "" });
-  }
-};
+    if (litige.litigeStatus === "RESOLU" || litige.litigeStatus === "REJETE") {
+      toast.error("Ce litige est déjà résolu ou rejeté et ne peut pas être modifié.", { autoClose: 3000 });
+      return;
+    }
+
+    if (litige.type?.litigeTypeName === "DUPLIQUE") {
+      setIsSubmitting(true);
+      try {
+        let userData;
+        try {
+          const rawUserData = localStorage.getItem('user');
+          userData = rawUserData ? JSON.parse(rawUserData) : {};
+        } catch (e) {
+          userData = {};
+          console.error("Erreur lors du parsing de localStorage 'user':", e);
+        }
+        const userID = userData.userID || 0;
+        if (userID <= 0) {
+          toast.error("Utilisateur non identifié. Redirection vers la connexion...", { autoClose: 3000 });
+          setTimeout(() => {
+            window.location.href = '/auth/login';
+          }, 3000);
+          return;
+        }
+
+        console.log("Appel à resolveDuplicated avec litigeID:", litige.litigeID, "et userID:", userID);
+
+        toast.info("Vérification...", { autoClose: false });
+        const result = await resolveDuplicated(litige.litigeID, userID);
+        console.log("Réponse de l'API ResolveDuplicated:", result);
+
+        await delay(1000);
+        toast.dismiss();
+
+        if (result === "resolved") {
+          toast.success("Litige résolu avec succès !", { autoClose: 3000 });
+        } else if (result === "rejected") {
+          toast.info("Pas de duplication sur cette facture.", { autoClose: 3000 }); 
+        } else {
+          throw new Error("Réponse inattendue de l'API : " + (result || "Aucune réponse"));
+        }
+
+        await refresh();
+      } catch (err) {
+        await delay(1000);
+        toast.dismiss();
+        toast.error("Erreur lors de la résolution du litige DUPLIQUE : " + (err instanceof Error ? err.message : "Erreur inconnue"), { autoClose: 3000 });
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      setSelectedLitige(litige);
+      setShowResolutionModal(true);
+      setOpenDropdownId(null);
+      setIsJustified(null);
+      setCorrectedData({ correctedMontantTotal: "", correctedAmountDue: "" });
+    }
+  };
+
   const columns: GridColDef<Litige>[] = [
     {
       field: 'rowNumber',
@@ -344,7 +360,7 @@ const handleShowResolution = async (litige: Litige, event: React.MouseEvent) => 
     {
       field: 'numFacture',
       headerName: 'Numéro Facture',
-      width: 285,
+      width: 280,
       sortable: true,
       headerAlign: 'center',
       align: 'center',
@@ -354,7 +370,7 @@ const handleShowResolution = async (litige: Litige, event: React.MouseEvent) => 
     {
       field: 'litigeTypeName',
       headerName: 'Type de Litige',
-      width: 315,
+      width: 310,
       sortable: true,
       renderCell: (params) => <span className="text-black">{params.row?.type?.litigeTypeName ?? "N/A"}</span>,
       headerAlign: 'center',
@@ -364,7 +380,7 @@ const handleShowResolution = async (litige: Litige, event: React.MouseEvent) => 
     {
       field: 'litigeStatus',
       headerName: 'Statut',
-      width: 265,
+      width: 245,
       sortable: true,
       headerAlign: 'center',
       align: 'center',
@@ -407,49 +423,53 @@ const handleShowResolution = async (litige: Litige, event: React.MouseEvent) => 
               style={{ minHeight: '40px' }}
             >
               <div className="py-1">
-                <button
-                  onClick={(event) => handleShowDetails(params.row, event)}
-                  className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
-                >
-                  <svg
-                    className="inline mr-2 h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {hasLitigeManagementReadPermission && (
+                  <button
+                    onClick={(event) => handleShowDetails(params.row, event)}
+                    className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M15 12h.01M12 12h.01M9 12h.01M12 15h.01M12 9h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Détails
-                </button>
-                <button
-                  onClick={(event) => handleShowResolution(params.row, event)}
-                  className={`block w-full text-left px-4 py-2 text-sm ${
-                    params.row.litigeStatus === "EN_COURS"
-                      ? "text-black hover:bg-blue-50"
-                      : "text-gray-400 cursor-not-allowed"
-                  }`}
-                  disabled={params.row.litigeStatus !== "EN_COURS"}
-                >
-                  <svg
-                    className="inline mr-2 h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                    <svg
+                      className="inline mr-2 h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M15 12h.01M12 12h.01M9 12h.01M12 15h.01M12 9h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Détails
+                  </button>
+                )}
+                {hasLitigeManagementWritePermission && (
+                  <button
+                    onClick={(event) => handleShowResolution(params.row, event)}
+                    className={`block w-full text-left px-4 py-2 text-sm ${
+                      params.row.litigeStatus === "EN_COURS"
+                        ? "text-black hover:bg-blue-50"
+                        : "text-gray-400 cursor-not-allowed"
+                    }`}
+                    disabled={params.row.litigeStatus !== "EN_COURS"}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Résoudre
-                </button>
+                    <svg
+                      className="inline mr-2 h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    Résoudre
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -461,12 +481,14 @@ const handleShowResolution = async (litige: Litige, event: React.MouseEvent) => 
   return (
     <div className="p-4">
       <div className="mb-4 flex gap-4 items-center">
-        <button
-          onClick={() => setShowLitigeTypesModal(true)}
-          className="px-4 py-2 bg-blue-700 text-amber-50 rounded hover:bg-blue-400 cursor-pointer"
-        >
-          Types de litiges
-        </button>
+        {hasLitigeManagementWritePermission && (
+          <button
+            onClick={() => setShowLitigeTypesModal(true)}
+            className="px-4 py-2 bg-blue-700 text-amber-50 rounded hover:bg-blue-400 cursor-pointer"
+          >
+            Types de litiges
+          </button>
+        )}
         <select
           value={selectedAcheteurId ?? ""}
           onChange={(e) => {

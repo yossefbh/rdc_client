@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaHome, FaUsers, FaFileInvoice, FaMoneyBillWave, FaBalanceScale, FaQuestionCircle, FaInfoCircle, FaChartBar, FaCalendarAlt, FaChartPie, FaChartLine, FaUserShield, FaUserTag, FaKey, FaUser } from 'react-icons/fa';
@@ -56,22 +57,66 @@ export const DashboardSidebar = ({ onSelect }: Props) => {
     setShowLogout(false); 
   };
 
+  const hasUserManagementPermission = user?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des utilisateurs" &&
+      (perm.canRead || perm.canWrite || perm.canCreate)
+  );
+
+  const hasRoleManagementPermission = user?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des roles" &&
+      (perm.canRead || perm.canWrite || perm.canCreate)
+  );
+
+  const hasBuyerPermission = user?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des données de créances (Acheteurs/Factures)" &&
+      (perm.canRead || perm.canWrite || perm.canCreate)
+  );
+
+  const hasInvoicePermission = user?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      (perm.permissionDefinition.permissionName === "Gestion des données de créances (Acheteurs/Factures)" &&
+        (perm.canRead || perm.canWrite || perm.canCreate)) ||
+      (perm.permissionDefinition.permissionName === "Gestion des litiges" && perm.canCreate) ||
+      (perm.permissionDefinition.permissionName === "Gestion des plan de paiements" && perm.canCreate)
+  );
+
+  const hasPaymentPermission = user?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      (perm.permissionDefinition.permissionName === "Gestion des plan de paiements" &&
+        (perm.canRead || perm.canWrite || perm.canCreate)) ||
+      (perm.permissionDefinition.permissionName === "Gestion des paiements" &&
+        (perm.canRead || perm.canWrite || perm.canCreate))
+  );
+
+  const hasDisputePermission = user?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des litiges" &&
+      (perm.canRead || perm.canWrite)
+  );
+
+  const isAdmin = user?.role?.roleName === "Administrateur";
+
   return (
     <aside className="w-68 min-w-60 max-w-80 flex-shrink-0 bg-blue-900 text-white h-screen overflow-y-auto">
       <div className="p-6 flex flex-col min-h-full">
         <h2 className="text-xl font-bold mb-7">Menu</h2>
         <ul className="space-y-7 flex-1">
-          <li
-            className={`flex items-center cursor-pointer hover:text-blue-300 text-lg ${
-              selectedItem?.startsWith('accueil') ? 'font-bold text-blue-400' : ''
-            }`}
-          >
-            <div className="flex items-center w-full" onClick={() => handleItemClick('accueil')}>
-              <FaHome className="mr-3" />
-              Accueil
-            </div>
-          </li>
-          {isAccueilOpen && (
+          {isAdmin && (
+            <li
+              className={`flex items-center cursor-pointer hover:text-blue-300 text-lg ${
+                selectedItem?.startsWith('accueil') ? 'font-bold text-blue-400' : ''
+              }`}
+            >
+              <div className="flex items-center w-full" onClick={() => handleItemClick('accueil')}>
+                <FaHome className="mr-3" />
+                Accueil
+              </div>
+            </li>
+          )}
+          {isAdmin && isAccueilOpen && (
             <ul className="pl-5 space-y-5">
               <li
                 onClick={() => handleSubItemClick('accueil-tableau')}
@@ -111,53 +156,63 @@ export const DashboardSidebar = ({ onSelect }: Props) => {
               </li>
             </ul>
           )}
-          <li
-            onClick={() => handleItemClick('acheteurs')}
-            className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
-              selectedItem === 'acheteurs' ? 'font-bold text-blue-500' : ''
-            }`}
-          >
-            <FaUsers className="mr-3" />
-            Acheteurs
-          </li>
-          <li
-            onClick={() => handleItemClick('factures')}
-            className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
-              selectedItem === 'factures' ? 'font-bold text-blue-500' : ''
-            }`}
-          >
-            <FaFileInvoice className="mr-3" />
-            Factures
-          </li>
-          <li
-            onClick={() => handleItemClick('paiements')}
-            className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
-              selectedItem === 'paiements' ? 'font-bold text-blue-500' : ''
-            }`}
-          >
-            <FaMoneyBillWave className="mr-3" />
-            Paiements
-          </li>
-          <li
-            onClick={() => handleItemClick('Litige')}
-            className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
-              selectedItem === 'Litige' ? 'font-bold text-blue-500' : ''
-            }`}
-          >
-            <FaBalanceScale className="mr-3" />
-            Litiges
-          </li>
-          <li
-            className={`flex items-center cursor-pointer hover:text-blue-300 text-lg ${
-              selectedItem === 'roles' || selectedItem === 'permissions' ? 'font-bold text-blue-400' : ''
-            }`}
-          >
-            <div className="flex items-center w-full" onClick={() => handleItemClick('roles-permissions')}>
-              <FaUserShield className="mr-3" />
-              Rôles et Permissions
-            </div>
-          </li>
-          {isRolesPermissionsOpen && (
+          {hasBuyerPermission && (
+            <li
+              onClick={() => handleItemClick('acheteurs')}
+              className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
+                selectedItem === 'acheteurs' ? 'font-bold text-blue-500' : ''
+              }`}
+            >
+              <FaUsers className="mr-3" />
+              Acheteurs
+            </li>
+          )}
+          {hasInvoicePermission && (
+            <li
+              onClick={() => handleItemClick('factures')}
+              className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
+                selectedItem === 'factures' ? 'font-bold text-blue-500' : ''
+              }`}
+            >
+              <FaFileInvoice className="mr-3" />
+              Factures
+            </li>
+          )}
+          {hasPaymentPermission && (
+            <li
+              onClick={() => handleItemClick('paiements')}
+              className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
+                selectedItem === 'paiements' ? 'font-bold text-blue-500' : ''
+              }`}
+            >
+              <FaMoneyBillWave className="mr-3" />
+              Paiements
+            </li>
+          )}
+          {hasDisputePermission && (
+            <li
+              onClick={() => handleItemClick('Litige')}
+              className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
+                selectedItem === 'Litige' ? 'font-bold text-blue-500' : ''
+              }`}
+            >
+              <FaBalanceScale className="mr-3" />
+              Litiges
+            </li>
+          )}
+          {hasRoleManagementPermission && (
+            <li
+              className={`flex items-center cursor-pointer hover:text-blue-300 text-lg ${
+                selectedItem === 'roles' || selectedItem === 'permissions' ? 'font-bold text-blue-400' : ''
+              }`}
+            >
+              <div className="flex items-center w-full" onClick={() => handleItemClick('roles-permissions')}>
+                <FaUserShield className="mr-3" />
+                Rôles et Permissions
+              </div>
+            </li>
+          )}
+          {isRolesPermissionsOpen && hasRoleManagementPermission && (
             <ul className="pl-5 space-y-5">
               <li
                 onClick={() => handleSubItemClick('roles')}
@@ -179,15 +234,17 @@ export const DashboardSidebar = ({ onSelect }: Props) => {
               </li>
             </ul>
           )}
-          <li
-            onClick={() => handleItemClick('users')}
-            className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
-              selectedItem === 'users' ? 'font-bold text-blue-500' : ''
-            }`}
-          >
-            <FaUser className="mr-3" />
-            Utilisateurs
-          </li>
+          {hasUserManagementPermission && (
+            <li
+              onClick={() => handleItemClick('users')}
+              className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
+                selectedItem === 'users' ? 'font-bold text-blue-500' : ''
+              }`}
+            >
+              <FaUser className="mr-3" />
+              Utilisateurs
+            </li>
+          )}
           <li
             onClick={() => handleItemClick('aide')}
             className={`flex items-center cursor-pointer hover:text-blue-700 text-lg ${
@@ -210,15 +267,16 @@ export const DashboardSidebar = ({ onSelect }: Props) => {
         {user && (
           <div className="mt-7 relative">
             <div
-              className="p-3 bg-blue-700 rounded-lg border-blue-600 cursor-pointer hover:bg-blue-800 flex items-center "
+              className="p-3 bg-blue-700 rounded-lg border-blue-600 cursor-pointer hover:bg-blue-800 flex items-center gap-3"
               onClick={() => setShowLogout(!showLogout)}
             >
-              <FaUser className="mr-1  text-white text-3xl" />
-              <div>
-                <p className="font-semibold">User : {user.username}</p>
-                <p className="px-2 font-bold">{user.role?.roleName || 'Non défini'}</p>
+              <FaUser className="text-white text-3xl shrink-0" />
+              <div className="flex flex-col ">
+                <p className="font-semibold text-white">User : {user.username}</p>
+                <p className="font-bold text-white whitespace-nowrap">{user.role?.roleName || 'Non défini'}</p>
               </div>
             </div>
+
             {showLogout && (
               <div className="absolute bottom-full left-0 w-full bg-white text-black rounded-t shadow-lg">
                 <button

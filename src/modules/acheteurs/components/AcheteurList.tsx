@@ -7,6 +7,7 @@ import { FaStar, FaStarHalfAlt } from 'react-icons/fa';
 
 export const AcheteurList = () => {
   const [acheteurs, setAcheteurs] = useState<Acheteur[]>([]);
+  const [userPermissions, setUserPermissions] = useState<any>(null);
 
   const refreshAcheteurs = async () => {
     try {
@@ -22,7 +23,16 @@ export const AcheteurList = () => {
 
   useEffect(() => {
     getAcheteurs().then(setAcheteurs).catch(console.error);
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUserPermissions(JSON.parse(storedUser));
+    }
   }, []);
+
+  const hasCreanceManagementWritePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des données de créances (Acheteurs/Factures)" && perm.canWrite
+  );
 
   const columns: GridColDef[] = [
     {
@@ -48,7 +58,7 @@ export const AcheteurList = () => {
     {
       field: 'adresse',
       headerName: 'Adresse',
-      width: 225,
+      width: 220,
       sortable: true,
       filterable: true,
       headerAlign: 'center',
@@ -58,7 +68,7 @@ export const AcheteurList = () => {
     {
       field: 'email',
       headerName: 'Email',
-      width: 260,
+      width: 255,
       sortable: true,
       filterable: true,
       headerAlign: 'center',
@@ -128,12 +138,14 @@ export const AcheteurList = () => {
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <button
-          onClick={refreshAcheteurs}
-          className="px-4 py-2 bg-green-700 text-amber-50 rounded hover:bg-green-400 cursor-pointer"
-        >
-          Refresh
-        </button>
+        {hasCreanceManagementWritePermission && (
+          <button
+            onClick={refreshAcheteurs}
+            className="px-4 py-2 bg-green-700 text-amber-50 rounded hover:bg-green-400 cursor-pointer"
+          >
+            Importer
+          </button>
+        )}
       </div>
 
       <Box sx={{ height: '88vh', width: '100%' }} className="overflow-visible">

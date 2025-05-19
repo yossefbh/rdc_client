@@ -184,3 +184,22 @@ export const activateUser = async (userID: number): Promise<any> => {
     throw error;
   }
 };
+export const updateUserRole = async (userID: number, roleID: number): Promise<boolean> => {
+  try {
+    const response = await fetch('https://localhost:7284/api/Users/UpdateRole', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userID, roleID }),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur lors de la mise à jour du rôle de l'utilisateur: ${errorText}`);
+    }
+    return await response.json(); 
+  } catch (error) {
+    console.error(`Erreur réseau ou parsing pour userID ${userID}:`, error);
+    throw error;
+  }
+};

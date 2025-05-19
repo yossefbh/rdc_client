@@ -173,7 +173,6 @@ export const lockPlanPaiement = async (planID: number): Promise<void> => {
 
 export const activatePlanPaiement = async (planID: number): Promise<void> => {
   try {
-    // Récupérer activatedByUserID depuis localStorage
     let userData;
     try {
       const rawUserData = localStorage.getItem('user');
@@ -184,7 +183,6 @@ export const activatePlanPaiement = async (planID: number): Promise<void> => {
     }
     const userID = userData.userID || 0;
 
-    // Créer le body de la requête
     const requestBody = {
       planID: planID,
       activatedByUserID: userID,
@@ -227,6 +225,19 @@ export const verifySignature = async (file: File): Promise<boolean> => {
     return result; 
   } catch (error) {
     console.error("Erreur dans verifySignature :", error);
+    throw error;
+  }
+};
+export const getPlanById = async (id: number): Promise<PlanDePaiement> => {
+  try {
+    const response = await fetch(`https://localhost:7284/api/PlanDePaiement/${id}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur lors de la récupération du plan ${id}: ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Erreur dans getPlanById :", error);
     throw error;
   }
 };

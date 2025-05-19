@@ -420,9 +420,9 @@ export const DashboardContent = ({ selected }: Props) => {
 
   const selectedAcheteurData = acheteurs.find(a => a.acheteurID === selectedAcheteur);
   const inputColorClass = selectedAcheteurData
-    ? selectedAcheteurData.score < 50
+    ? selectedAcheteurData.score <=20 
       ? 'border-red-500 bg-red-100'
-      : selectedAcheteurData.score <= 80
+      : selectedAcheteurData.score <= 75 && selectedAcheteurData.score>20
       ? 'border-orange-500 bg-orange-100'
       : 'border-green-500 bg-green-100'
     : 'border-gray-300 bg-white';
@@ -1149,8 +1149,8 @@ const factureStatusChartData: ChartData<"pie", number[], string> = {
                           <tbody>
                             {debtorSummary.map((debtor, index) => {
                               const score = debtor.acheteur?.score || 0;
-                              const etat = score < 50 ? 'Risqué' : score <= 80 ? 'Moyen' : 'Fiable';
-                              const etatColor = score < 50 ? 'text-red-600' : score <= 80 ? 'text-orange-600' : 'text-green-600';
+                              const etat = score <= 20 ? 'Risqué' : score <= 75 && score > 20? 'Moyen' : 'Fiable';
+                              const etatColor = score <= 20 ? 'text-red-600' : score <= 75 && score>20 ? 'text-orange-500' : 'text-green-600';
                               return (
                                 <tr key={index} className="border-b hover:bg-gray-50">
                                   <td className="py-2 px-4 text-black">

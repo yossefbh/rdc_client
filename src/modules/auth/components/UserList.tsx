@@ -8,7 +8,7 @@ import MonitorIcon from '@mui/icons-material/Monitor';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 export const UserList = () => {
-  const { users, roles, loading, error, fetchUsers, fetchRoles, handleCreateUser, fetchUserHistory, handleDeactivateUser, handleActivateUser } = useAuth();
+  const { users, roles, loading, error, fetchUsers, fetchRoles, handleCreateUser, fetchUserHistory, handleDeactivateUser, handleActivateUser, handleUpdateUserRole } = useAuth();
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [email, setEmail] = useState<string>('');
@@ -21,12 +21,29 @@ export const UserList = () => {
   const [selectedHistoryType, setSelectedHistoryType] = useState<string>('createdPlans');
   const [showDeactivateModal, setShowDeactivateModal] = useState<boolean>(false);
   const [showActivateModal, setShowActivateModal] = useState<boolean>(false);
+  const [showUpdateRoleModal, setShowUpdateRoleModal] = useState<boolean>(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [currentUserRoleId, setCurrentUserRoleId] = useState<number>(0);
+  const [userPermissions, setUserPermissions] = useState<any>(null);
 
   useEffect(() => {
     fetchUsers();
     fetchRoles();
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUserPermissions(JSON.parse(storedUser));
+    }
   }, []);
+
+  const hasUserManagementCreatePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des utilisateurs" && perm.canCreate
+  );
+
+  const hasUserManagementWritePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des utilisateurs" && perm.canWrite
+  );
 
   const handleOpenCreateModal = () => {
     setEmail('');
@@ -99,6 +116,48 @@ export const UserList = () => {
     } catch (err) {
       console.error("Erreur lors de la récupération de l'historique:", err);
       toast.error("Impossible de charger l'historique des actions", { position: 'top-center' });
+    }
+  };
+
+  const handleOpenUpdateRoleModal = (userId: number, currentRoleId: number) => {
+    setSelectedUserId(userId);
+    setCurrentUserRoleId(currentRoleId);
+    setSelectedRoleId(currentRoleId); 
+    setShowUpdateRoleModal(true);
+    setOpenMenuId(null);
+  };
+
+  const handleCloseUpdateRoleModal = () => {
+    setShowUpdateRoleModal(false);
+    setSelectedUserId(null);
+    setCurrentUserRoleId(0);
+    setSelectedRoleId(0);
+  };
+
+  const handleUpdateRole = async () => {
+    if (!selectedUserId || selectedRoleId === 0) {
+      toast.error('Veuillez sélectionner un rôle.', { position: 'top-center' });
+      return;
+    }
+
+    if (selectedRoleId === currentUserRoleId) {
+      toast.error('Changer rôle', { position: 'top-center' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const success = await handleUpdateUserRole(selectedUserId, selectedRoleId);
+      if (success) {
+        toast.success('Rôle mis à jour avec succès !', { position: 'top-center' });
+        handleCloseUpdateRoleModal();
+      } else {
+        toast.error('Échec de la mise à jour du rôle.', { position: 'top-center' });
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur lors de la mise à jour du rôle.', { position: 'top-center' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -211,29 +270,39 @@ export const UserList = () => {
                 >
                   Historique des actions
                 </button>
-                {params.row.userStatus.toLowerCase() === 'active' && (
-                  <button
-                    onClick={() => {
-                      setSelectedUserId(params.row.userID);
-                      setShowDeactivateModal(true);
-                      setOpenMenuId(null);
-                    }}
-                    className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
-                  >
-                    Désactiver
-                  </button>
-                )}
-                {params.row.userStatus.toLowerCase() === 'inactive' && (
-                  <button
-                    onClick={() => {
-                      setSelectedUserId(params.row.userID);
-                      setShowActivateModal(true);
-                      setOpenMenuId(null);
-                    }}
-                    className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
-                  >
-                    Activer
-                  </button>
+                {params.row.role.roleName.toLowerCase() !== 'administrateur' && hasUserManagementWritePermission && (
+                  <>
+                    <button
+                      onClick={() => handleOpenUpdateRoleModal(params.row.userID, params.row.role.roleID)}
+                      className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
+                    >
+                      Modifier rôle
+                    </button>
+                    {params.row.userStatus.toLowerCase() === 'active' && (
+                      <button
+                        onClick={() => {
+                          setSelectedUserId(params.row.userID);
+                          setShowDeactivateModal(true);
+                          setOpenMenuId(null);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
+                      >
+                        Désactiver
+                      </button>
+                    )}
+                    {params.row.userStatus.toLowerCase() === 'inactive' && (
+                      <button
+                        onClick={() => {
+                          setSelectedUserId(params.row.userID);
+                          setShowActivateModal(true);
+                          setOpenMenuId(null);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
+                      >
+                        Activer
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -289,12 +358,14 @@ export const UserList = () => {
           </svg>
         </div>
         <div className="flex-grow"></div>
-        <button
-          onClick={handleOpenCreateModal}
-          className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-400 cursor-pointer flex items-center gap-2"
-        >
-          <PersonAddIcon /> Ajouter Utilisateur
-        </button>
+        {hasUserManagementCreatePermission && (
+          <button
+            onClick={handleOpenCreateModal}
+            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-400 cursor-pointer flex items-center gap-2"
+          >
+            <PersonAddIcon /> Ajouter Utilisateur
+          </button>
+        )}
       </div>
 
       <Box sx={{ height: '95vh', width: '100%' }} className="overflow-visible">
@@ -371,6 +442,47 @@ export const UserList = () => {
                 className={`px-4 py-2 rounded-lg ${isSubmitting ? 'bg-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
               >
                 {isSubmitting ? 'Création en cours...' : 'Créer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pour modifier le rôle d'un utilisateur */}
+      {showUpdateRoleModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <p className="text-sm text-gray-700 mb-4 text-center">
+              Lorsque vous changez le rôle, les anciennes permissions du rôle actuel vont changer.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-black mb-1">Nouveau Rôle</label>
+              <select
+                value={selectedRoleId}
+                onChange={(e) => setSelectedRoleId(Number(e.target.value))}
+                className="w-full border p-2 rounded-lg text-black"
+              >
+                <option value={0}>Sélectionner un rôle</option>
+                {roles.map((role) => (
+                  <option key={role.roleID} value={role.roleID}>
+                    {role.roleName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={handleCloseUpdateRoleModal}
+                className="px-4 py-2 bg-gray-300 text-black rounded-lg hover:bg-gray-400"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleUpdateRole}
+                disabled={isSubmitting}
+                className={`px-4 py-2 rounded-lg ${isSubmitting ? 'bg-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+              >
+                {isSubmitting ? 'Mise à jour...' : 'Modifier'}
               </button>
             </div>
           </div>

@@ -14,11 +14,31 @@ export const RoleList = () => {
   const [roleToView, setRoleToView] = useState<Role | null>(null);
   const [roleName, setRoleName] = useState<string>('');
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
+  const [userPermissions, setUserPermissions] = useState<any>(null);
 
   useEffect(() => {
     fetchRoles();
     fetchPermissions();
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUserPermissions(JSON.parse(storedUser));
+    }
   }, []);
+
+  const hasRoleManagementCreatePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des roles" && perm.canCreate
+  );
+
+  const hasRoleManagementWritePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des roles" && perm.canWrite
+  );
+
+  const hasRoleManagementReadPermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des roles" && perm.canRead
+  );
 
   const initializeRolePermissions = () => {
     setRolePermissions(
@@ -178,31 +198,37 @@ export const RoleList = () => {
                 <h3 className="text-xl font-bold text-black mt-2">{role.roleName}</h3>
               </div>
               <div className="flex justify-between items-end mt-4">
-                <a
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); handleOpenEditModal(role.roleID); }}
-                  className="text-purple-600 hover:text-purple-800 text-sm"
-                >
-                  Modifier Role
-                </a>
-                <button
-                  onClick={() => handleOpenViewModal(role.roleID)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <FaEye size={20} />
-                </button>
+                {hasRoleManagementWritePermission && (
+                  <a
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); handleOpenEditModal(role.roleID); }}
+                    className="text-purple-600 hover:text-purple-800 text-sm"
+                  >
+                    Modifier Role
+                  </a>
+                )}
+                {hasRoleManagementReadPermission && (
+                  <button
+                    onClick={() => handleOpenViewModal(role.roleID)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <FaEye size={20} />
+                  </button>
+                )}
               </div>
             </div>
           ))}
           {/* Carte pour créer un nouveau rôle */}
-          <div
-            className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg shadow-sm p-4 flex flex-col justify-center items-center cursor-pointer hover:bg-gray-100 transition"
-            onClick={handleOpenCreateModal}
-          >
-            <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
-              Créer nouveau Role
-            </button>
-          </div>
+          {hasRoleManagementCreatePermission && (
+            <div
+              className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg shadow-sm p-4 flex flex-col justify-center items-center cursor-pointer hover:bg-gray-100 transition"
+              onClick={handleOpenCreateModal}
+            >
+              <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+                Créer nouveau Role
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-black">Aucun rôle trouvé.</p>
@@ -234,7 +260,7 @@ export const RoleList = () => {
                   <tr className="border-b">
                     <th className="py-2 px-4 text-black">Permission</th>
                     <th className="py-2 px-4 text-black">Lire</th>
-                    <th className="py-2 px-4 text-black">Écrire</th>
+                    <th className="py-2 px-3 text-black">Modifier</th>
                     <th className="py-2 px-4 text-black">Créer</th>
                   </tr>
                 </thead>
@@ -246,7 +272,7 @@ export const RoleList = () => {
                     return (
                       <tr key={permission.permissionDefinitionID} className="border-b">
                         <td className="py-2 px-4 text-black">{permission.permissionName}</td>
-                        <td className="py-2 px-6 text-black">
+                        <td className="py-2 px-8 text-black">
                           <input
                             type="checkbox"
                             checked={rolePermission?.canRead || false}

@@ -36,6 +36,7 @@ export const FactureList = () => {
   const [litigeDescription, setLitigeDescription] = useState<string>("");
   const [litigeFiles, setLitigeFiles] = useState<File[]>([]);
   const [litigeTypes, setLitigeTypes] = useState<LitigeType[]>([]);
+  const [userPermissions, setUserPermissions] = useState<any>(null);
 
   const refreshFactures = async () => {
     try {
@@ -52,7 +53,26 @@ export const FactureList = () => {
     getFactures().then(setFactures).catch(console.error);
     getAcheteurs().then(setAcheteurs).catch(console.error);
     getLitigeTypes().then(setLitigeTypes).catch(console.error);
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUserPermissions(JSON.parse(storedUser));
+    }
   }, []);
+
+  const hasCreanceManagementWritePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des données de créances (Acheteurs/Factures)" && perm.canWrite
+  );
+
+  const hasLitigeCreatePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des litiges" && perm.canCreate
+  );
+
+  const hasPlanPaiementWritePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des plan de paiements" && perm.canWrite
+  );
 
   const formatMontant = (montant: number) => {
     return montant.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
@@ -80,6 +100,10 @@ export const FactureList = () => {
     }
     if (selectedFactures.length === 0) {
       toast.error("Il faut au moins choisir une facture.", { autoClose: 2500 });
+      return;
+    }
+    if (selectedAcheteurScore <= 20) {
+      toast.error("Votre score est trop faible !. Contactez nous dès que possible pour régler votre situation ", { autoClose: 2500 });
       return;
     }
     const facturesSelectionnees = factures.filter(facture => selectedFactures.includes(facture.factureID));
@@ -386,51 +410,52 @@ export const FactureList = () => {
   };
 
   const handleSubmitLitige = async () => {
-  if (!selectedFactureId || litigeTypeId === null || !litigeDescription) {
-    toast.error("Veuillez remplir tous les champs obligatoires.", { autoClose: 3000 });
-    return;
-  }
-
-  setIsSubmitting(true);
-  try {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
-    const userID = userData.userID || 0;
-    if (userID === 0) {
-      toast.error("Utilisateur non identifié. Redirection vers la connexion...", { autoClose: 3000 });
-      setTimeout(() => {
-        window.location.href = '/auth/login'; 
-      }, 3000);
+    if (!selectedFactureId || litigeTypeId === null || !litigeDescription) {
+      toast.error("Veuillez remplir tous les champs obligatoires.", { autoClose: 3000 });
       return;
     }
-    const litigeData = {
-      factureID: selectedFactureId,
-      typeID: litigeTypeId,
-      litigeDescription: litigeDescription,
-      declaredByUserID: userID, 
-    };
 
-    const litigeID = await createLitige(litigeData,userID);
+    setIsSubmitting(true);
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      const userID = userData.userID || 0;
+      if (userID === 0) {
+        toast.error("Utilisateur non identifié. Redirection vers la connexion...", { autoClose: 3000 });
+        setTimeout(() => {
+          window.location.href = '/auth/login'; 
+        }, 3000);
+        return;
+      }
+      const litigeData = {
+        factureID: selectedFactureId,
+        typeID: litigeTypeId,
+        litigeDescription: litigeDescription,
+        declaredByUserID: userID, 
+      };
 
-    if (litigeFiles.length > 0) {
-      await uploadLitigeFiles(litigeID, litigeFiles);
-      toast.success("Litige créé et pièces jointes envoyées avec succès !", { autoClose: 3000 });
-    } else {
-      toast.success("Litige créé avec succès !", { autoClose: 3000 });
+      const litigeID = await createLitige(litigeData, userID);
+
+      if (litigeFiles.length > 0) {
+        await uploadLitigeFiles(litigeID, litigeFiles);
+        toast.success("Litige créé et pièces jointes envoyées avec succès !", { autoClose: 3000 });
+      } else {
+        toast.success("Litige créé avec succès !", { autoClose: 3000 });
+      }
+
+      setShowLitigeModal(false);
+      setSelectedFactureId(null);
+      setLitigeTypeId(null);
+      setLitigeDescription("");
+      setLitigeFiles([]);
+      getFactures().then(setFactures).catch(console.error);
+    } catch (error) {
+      console.error("Erreur lors de la création du litige ou de l'envoi des pièces jointes:", error);
+      toast.error("Une erreur est survenue lors de la soumission du litige.", { autoClose: 3000 });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    setShowLitigeModal(false);
-    setSelectedFactureId(null);
-    setLitigeTypeId(null);
-    setLitigeDescription("");
-    setLitigeFiles([]);
-    getFactures().then(setFactures).catch(console.error);
-  } catch (error) {
-    console.error("Erreur lors de la création du litige ou de l'envoi des pièces jointes:", error);
-    toast.error("Une erreur est survenue lors de la soumission du litige.", { autoClose: 3000 });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
   const columns: GridColDef[] = [
     {
       field: 'numFacture',
@@ -521,25 +546,27 @@ export const FactureList = () => {
               style={{ minHeight: '40px' }}
             >
               <div className="py-1">
-                <button
-                  onClick={(event) => handleFaireLitige(params.row.factureID, event)}
-                  className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
-                >
-                  <svg
-                    className="inline mr-2 h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {hasLitigeCreatePermission && (
+                  <button
+                    onClick={(event) => handleFaireLitige(params.row.factureID, event)}
+                    className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Déclarer un Litige
-                </button>
+                    <svg
+                      className="inline mr-2 h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Déclarer un Litige
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -556,12 +583,14 @@ export const FactureList = () => {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <div className="flex space-x-2">
-          <button
-            onClick={refreshFactures}
-            className="px-4 py-2 bg-green-700 text-amber-50 rounded hover:bg-green-400 cursor-pointer"
-          >
-            Refresh
-          </button>
+          {hasCreanceManagementWritePermission && (
+            <button
+              onClick={refreshFactures}
+              className="px-4 py-2 bg-green-700 text-amber-50 rounded hover:bg-green-400 cursor-pointer"
+            >
+              Importer
+            </button>
+          )}
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
@@ -575,12 +604,14 @@ export const FactureList = () => {
             <option value="EN_LITIGE" className="text-black">En litige</option>
           </select>
         </div>
-        <button
-          onClick={handlePlanifierPaiement}
-          className="px-4 py-2 bg-blue-700 text-amber-50 rounded hover:bg-blue-400 cursor-pointer mb-4"
-        >
-          Planifier un paiement
-        </button>
+        {hasPlanPaiementWritePermission && (
+          <button
+            onClick={handlePlanifierPaiement}
+            className="px-4 py-2 bg-blue-700 text-amber-50 rounded hover:bg-blue-400 cursor-pointer mb-4"
+          >
+            Planifier un paiement
+          </button>
+        )}
       </div>
 
       <div className="bg-blue-100 p-3 rounded-lg mb-4">
@@ -653,8 +684,8 @@ export const FactureList = () => {
                 value={optionPaiement}
                 onChange={(e) => {
                   const newOption = e.target.value;
-                  if (newOption === "libre" && selectedAcheteur !== null && selectedAcheteurScore < 50) {
-                    toast.error("Votre score est insuffisant (< 50) ! Vous ne pouvez pas utiliser cette option.", { autoClose: 3000 });
+                  if (newOption === "libre" && selectedAcheteur !== null && selectedAcheteurScore < 80) {
+                    toast.error("Votre score est insuffisant ! Vous ne pouvez pas utiliser cette option.", { autoClose: 3000 });
                     return; 
                   }
                   setOptionPaiement(newOption);

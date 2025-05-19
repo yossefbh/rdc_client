@@ -87,9 +87,6 @@ export default function Login() {
             />
 
           </div>
-          <div className="text-right">
-            <a href="#" className="text-sm text-blue-600 hover:underline">Mot de passe oublié ?</a>
-          </div>
           <button
             type="submit"
             disabled={isLoading}
@@ -100,9 +97,6 @@ export default function Login() {
             {isLoading ? 'En cours...' : 'Se connecter'}
           </button>
         </form>
-        <p className="text-center text-sm text-gray-600 mt-6">
-          Pas de compte ? <a href="#" className="text-blue-600 hover:underline">Créez-en un</a>
-        </p>
       </div>
     </div>
   );

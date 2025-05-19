@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getPlansPaiement } from "../services/paiementService";
+import { getPlansPaiement, getPlanById } from "../services/paiementService";
 import { PlanDePaiement } from "../types/Interface";
 
 export const usePaiements = () => {
@@ -19,9 +19,22 @@ export const usePaiements = () => {
     }
   };
 
+  const refreshPlan = async (planID: number) => {
+    try {
+      const updatedPlan = await getPlanById(planID);
+      setPlans((prevPlans) =>
+        prevPlans.map((plan) =>
+          plan.planID === planID ? updatedPlan : plan
+        )
+      );
+    } catch (err) {
+      setError(`Erreur lors de la mise à jour du plan ${planID}`);
+    }
+  };
+
   useEffect(() => {
     fetchPlans();
   }, []);
 
-  return { plans, loading, error, refresh: fetchPlans };
+  return { plans, loading, error, refresh: fetchPlans, refreshPlan };
 };

@@ -1,13 +1,15 @@
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 import { usePaiements } from "@/modules/paiements/hooks/usePaiements";
 import { PlanDePaiement, PaiementDate } from "../types/Interface";
 import { payerEcheance, getEcheanceDetails, createPlanPaiement, createPaiementDates, lockPlanPaiement, activatePlanPaiement, verifySignature } from "../services/paiementService";
+import { getAcheteurs } from "@/modules/acheteurs/services/AcheteurService";
+import { Acheteur } from "@/modules/acheteurs/types/Interface";
 import { toast } from "react-toastify";
 import Box from '@mui/material/Box';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 
 export const PaiementList = () => {
-  const { plans, loading, error, refresh } = usePaiements();
+  const { plans, loading, error, refresh, refreshPlan } = usePaiements();
   const [selectedPlan, setSelectedPlan] = useState<PlanDePaiement | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -36,6 +38,43 @@ export const PaiementList = () => {
   const [calculatedEcheances, setCalculatedEcheances] = useState<{ date: string; montant: number }[]>([]);
   const [actionType, setActionType] = useState<"details" | "confirmOnSite" | "confirmOnline" | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [acheteurs, setAcheteurs] = useState<Acheteur[]>([]);
+  const [userPermissions, setUserPermissions] = useState<any>(null);
+
+  useEffect(() => {
+    getAcheteurs().then(setAcheteurs).catch((err) => {
+      toast.error("Impossible de charger les données des acheteurs.", { autoClose: 3000 });
+    });
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUserPermissions(JSON.parse(storedUser));
+    }
+  }, []);
+
+  const hasPlanPaiementWritePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des plan de paiements" && perm.canWrite
+  );
+
+  const hasPlanPaiementCreatePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des plan de paiements" && perm.canCreate
+  );
+
+  const hasPlanPaiementReadPermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des plan de paiements" && perm.canRead
+  );
+
+  const hasPaiementCreatePermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des paiements" && perm.canCreate
+  );
+
+  const hasPaiementReadPermission = userPermissions?.role?.rolePermissionResponses?.some(
+    (perm: any) =>
+      perm.permissionDefinition.permissionName === "Gestion des paiements" && perm.canRead
+  );
 
   if (loading) return <p>Chargement des plans...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
@@ -45,6 +84,13 @@ export const PaiementList = () => {
       return "0.000";
     }
     return montant.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  };
+
+  const getAcheteurScore = (plan: PlanDePaiement): number => {
+    if (!plan.factures || plan.factures.length === 0) return 0;
+    const acheteurID = plan.factures[0].acheteurID;
+    const acheteur = acheteurs.find((a) => a.acheteurID === acheteurID);
+    return acheteur?.score ?? 0;
   };
 
   const createAndSavePlan = async (
@@ -100,6 +146,7 @@ export const PaiementList = () => {
 
       if (selectedPlan?.planStatus === "ANNULE") {
         await lockPlanPaiement(selectedPlan.planID);
+        await refreshPlan(selectedPlan.planID); 
       }
 
       toast.success("Plan de paiement validé avec succès !", { autoClose: 3000 });
@@ -114,7 +161,7 @@ export const PaiementList = () => {
       setShowLibreModal(false);
       setLibreEcheances([]);
       setCalculatedEcheances([]);
-      refresh();
+      await refresh();
     } catch (error) {
       console.error("Erreur dans createAndSavePlan :", error);
       throw error;
@@ -193,6 +240,7 @@ export const PaiementList = () => {
 
       setSelectedPlan(updatedPlan);
       toast.success("Paiement effectué avec succès !");
+      await refreshPlan(selectedPlan.planID); 
     } catch (err) {
       console.error("Erreur de paiement:", err);
       toast.error("Erreur lors du paiement");
@@ -222,7 +270,7 @@ export const PaiementList = () => {
         toast.success("Le plan a été activé avec succès !", { autoClose: 3000 });
         setSelectedPlan(null);
         setActionType(null);
-        refresh();
+        await refreshPlan(plan.planID); 
       }
     } catch (err) {
       console.error("Erreur lors de la confirmation sur place:", err);
@@ -279,9 +327,9 @@ export const PaiementList = () => {
         toast.success("Avance payée avec succès !", { autoClose: 3000 });
       }
 
+      await refreshPlan(selectedPlan.planID); 
       setSelectedPlan(null);
       setActionType(null);
-      refresh();
     } catch (err) {
       console.error("Erreur lors du paiement de l'avance:", err);
       toast.error("Erreur lors du paiement de l'avance", { autoClose: 3000 });
@@ -345,10 +393,10 @@ export const PaiementList = () => {
       } else {
         await activatePlanPaiement(selectedPlan.planID);
         toast.success("Le plan a été validé avec succès !", { autoClose: 3000 });
+        await refreshPlan(selectedPlan.planID); 
         setSelectedPlan(null);
         setActionType(null);
         setSelectedFile(null);
-        refresh();
       }
     } catch (err) {
       console.error("Erreur lors de la vérification de la signature:", err);
@@ -381,12 +429,21 @@ export const PaiementList = () => {
   const handleAjouterNouveauPlan = (plan: PlanDePaiement) => {
     const allFacturesPaid = plan.factures.every((facture) => facture.status === "PAYEE");
     if (allFacturesPaid) {
-      toast.error("Impossible de créer un nouveau plan : toutes les factures sont déjà payées.");
+      toast.error("Impossible de créer un nouveau plan : toutes les factures sont déjà payées.", { autoClose: 3000 });
       setOpenMenuId(null);
       return;
     }
     if (plan.planStatus === "ANNULE" && plan.isLocked) {
-      toast.error("Vous avez créé un plan pour les mêmes factures.");
+      toast.error("Vous avez créé un plan pour les mêmes factures.", { autoClose: 3000 });
+      setOpenMenuId(null);
+      return;
+    }
+    const acheteurScore = getAcheteurScore(plan);
+    if (acheteurScore <= 20) {
+      toast.error(
+        "Votre score est trop faible !. Contactez nous dès que possible pour régler votre situation",
+        { autoClose: 3000 }
+      );
       setOpenMenuId(null);
       return;
     }
@@ -753,7 +810,7 @@ export const PaiementList = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 200,
+      width: 185,
       sortable: false,
       filterable: false,
       headerAlign: 'center',
@@ -773,68 +830,72 @@ export const PaiementList = () => {
               style={{ minHeight: '40px' }}
             >
               <div className="py-1">
-                <button
-                  onClick={() => {
-                    setSelectedPlan(params.row);
-                    setActionType("details");
-                    setOpenMenuId(null);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
-                >
-                  <svg
-                    className="inline mr-2 h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {hasPlanPaiementReadPermission && (
+                  <button
+                    onClick={() => {
+                      setSelectedPlan(params.row);
+                      setActionType("details");
+                      setOpenMenuId(null);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Détails
-                </button>
-                <button
-                  onClick={() => {
-                    if (params.row.planStatus === "TERMINE") {
-                      toast.error("Ce plan est déjà terminé et ne peut plus être payé.");
+                    <svg
+                      className="inline mr-2 h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Détails
+                  </button>
+                )}
+                {hasPaiementCreatePermission && (
+                  <button
+                    onClick={() => {
+                      if (params.row.planStatus === "TERMINE") {
+                        toast.error("Ce plan est déjà terminé et ne peut plus être payé.");
+                        setOpenMenuId(null);
+                        return;
+                      }
+                      if (params.row.planStatus === "ANNULE") {
+                        toast.error("Ce plan est annulé et ne peut pas être payé.");
+                        setOpenMenuId(null);
+                        return;
+                      }
+                      if (params.row.planStatus === "EN_ATTENTE") {
+                        toast.error("Il faut que le plan soit validé avant de pouvoir effectuer un paiement.");
+                        setOpenMenuId(null);
+                        return;
+                      }
+                      setSelectedPlan(params.row);
+                      setShowPaymentModal(true);
                       setOpenMenuId(null);
-                      return;
-                    }
-                    if (params.row.planStatus === "ANNULE") {
-                      toast.error("Ce plan est annulé et ne peut pas être payé.");
-                      setOpenMenuId(null);
-                      return;
-                    }
-                    if (params.row.planStatus === "EN_ATTENTE") {
-                      toast.error("Il faut que le plan soit validé avant de pouvoir effectuer un paiement.");
-                      setOpenMenuId(null);
-                      return;
-                    }
-                    setSelectedPlan(params.row);
-                    setShowPaymentModal(true);
-                    setOpenMenuId(null);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
-                >
-                  <svg
-                    className="inline mr-2 h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Payer
-                </button>
-                {params.row.planStatus === "EN_ATTENTE" && (
+                    <svg
+                      className="inline mr-2 h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Payer
+                  </button>
+                )}
+                {hasPlanPaiementWritePermission && params.row.planStatus === "EN_ATTENTE" && (
                   <button
                     onClick={() => handleConfirmOnSite(params.row)}
                     className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
@@ -855,7 +916,7 @@ export const PaiementList = () => {
                     Confirmation sur place
                   </button>
                 )}
-                {params.row.planStatus === "EN_ATTENTE" && (
+                {hasPlanPaiementWritePermission && params.row.planStatus === "EN_ATTENTE" && (
                   <button
                     onClick={() => handleConfirmOnline(params.row)}
                     className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
@@ -876,7 +937,7 @@ export const PaiementList = () => {
                     Confirmation en ligne
                   </button>
                 )}
-                {params.row.planStatus === "ANNULE" && (
+                {hasPlanPaiementCreatePermission && params.row.planStatus === "ANNULE" && (
                   <button
                     onClick={() => handleAjouterNouveauPlan(params.row)}
                     className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
@@ -939,25 +1000,25 @@ export const PaiementList = () => {
 
       {selectedPlan && actionType === "details" && !showPaymentModal && !showNewPlanModal && !showConfirmOnSiteModal && !showVerifySignatureModal && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white w-3/4 p-6 rounded-lg shadow-lg max-h-[90vh] overflow-y-auto text-black">
+          <div className="bg-white w-3/4 p-6 roundupower-lg shadow-lg max-h-[90vh] overflow-y-auto text-black">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold">Détails du Plan {selectedPlan.planID}</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <div className="bg-blue-50 p-4 roundupower-lg border border-blue-100">
                 <h4 className="font-semibold text-blue-800 mb-2">Montant total des factures</h4>
                 <p className="text-xl font-bold">
                   {formatMontant(selectedPlan.factures.reduce((sum, f) => sum + f.montantTotal, 0))} DT
                 </p>
               </div>
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <div className="bg-blue-50 p-4 roundupower-lg border border-blue-100">
                 <h4 className="font-semibold text-blue-800 mb-2">Montant total à payer</h4>
                 <p className="text-xl font-bold">
                   {formatMontant(selectedPlan.montantTotal)} DT
                 </p>
               </div>
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <div className="bg-blue-50 p-4 roundupower-lg border border-blue-100">
                 <h4 className="font-semibold text-blue-800 mb-2">Montant restant</h4>
                 <p className="text-xl font-bold">{formatMontant(selectedPlan.montantRestant)} DT</p>
               </div>
@@ -966,7 +1027,7 @@ export const PaiementList = () => {
             <div className="mb-8">
               <h4 className="font-semibold text-lg mb-3 border-b pb-2">Factures du plan</h4>
               <div className="overflow-x-auto">
-                <table className="w-full bg-white shadow rounded">
+                <table className="w-full bg-white shadow roundupower">
                   <thead>
                     <tr className="bg-blue-100">
                       <th className="pl-6 pr-3 py-3 text-left w-[20%]">Numéro</th>
@@ -987,7 +1048,7 @@ export const PaiementList = () => {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span
-                            className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${facture.status === "PAYEE"
+                            className={`inline-block px-3 py-1 roundupower-full text-xs font-medium ${facture.status === "PAYEE"
                                 ? "bg-green-100 text-green-800"
                                 : facture.status === "EN_COURS_DE_PAIEMENT"
                                   ? "bg-yellow-100 text-yellow-800"
@@ -1007,10 +1068,10 @@ export const PaiementList = () => {
             <div className="mb-6">
               <h4 className="font-semibold text-lg mb-3 border-b pb-2">Échéances de Paiement ( {selectedPlan.nombreDeEcheances} )</h4>
               <div className="overflow-x-auto">
-                <table className="w-full bg-white shadow rounded">
+                <table className="w-full bg-white shadow roundupower">
                   <thead>
                     <tr className="bg-green-300">
-                      <th className="pl-6 pr-3 py-3 text-left w-[25%]">Date</th>
+                      <th className="pl-13 pr-3 py-3 text-left w-[22%]">Date</th>
                       <th className="p-3 text-center w-[20%]">Montant </th>
                       <th className="p-3 text-center w-[20%]">Restant</th>
                       <th className="p-3 text-center w-[15%]">Statut</th>
@@ -1020,12 +1081,12 @@ export const PaiementList = () => {
                   <tbody>
                     {selectedPlan.paiementDates.map((paiement) => (
                       <tr key={paiement.dateID} className="border-t hover:bg-gray-50">
-                        <td className="pl-6 pr-3 py-3 whitespace-nowrap">{paiement.echeanceDate}</td>
+                        <td className="pl-9 pr-3 py-3 whitespace-nowrap">{paiement.echeanceDate}</td>
                         <td className="p-3 text-center">{formatMontant(paiement.montantDeEcheance)} DT</td>
                         <td className="p-3 text-center">{formatMontant(paiement.montantDue)} DT</td>
                         <td className="p-3 text-center">
                           <span
-                            className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${paiement.isPaid
+                            className={`inline-block px-3 py-1 roundupower-full text-xs font-medium ${paiement.isPaid
                                 ? "bg-green-100 text-green-800"
                                 : paiement.montantPayee > 0
                                   ? "bg-yellow-100 text-yellow-800"
@@ -1040,57 +1101,61 @@ export const PaiementList = () => {
                           </span>
                         </td>
                         <td className="p-3 text-center relative">
-                          <div className="relative inline-block">
-                            <button
-                              onClick={() => toggleHistoryMenu(paiement.dateID)}
-                              className="p-1 rounded-full hover:bg-gray-200"
-                              aria-label="Menu historique"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-6 w-6"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
+                          {hasPaiementReadPermission ? (
+                            <div className="relative inline-block">
+                              <button
+                                onClick={() => toggleHistoryMenu(paiement.dateID)}
+                                className="p-1 roundupower-full hover:bg-gray-200"
+                                aria-label="Menu historique"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2.5}
-                                  d="M5 12h.01M12 12h.01M19 12h.01"
-                                />
-                              </svg>
-                            </button>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-6 w-6"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2.5}
+                                    d="M5 12h.01M12 12h.01M19 12h.01"
+                                  />
+                                </svg>
+                              </button>
 
-                            {openHistoryMenuId === paiement.dateID && (
-                              <div
-                                className="absolute right-0 z-50 w-32 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 top-full mt-1"
-                                style={{ visibility: "visible", overflow: "visible" }}
-                              >
-                                <div className="py-1">
-                                  <button
-                                    onClick={() => showPaymentHistory(paiement.dateID)}
-                                    className="flex items-center w-full px-4 py-2 text-left text-sm text-black hover:bg-blue-50"
-                                  >
-                                    <svg
-                                      className="mr-2 h-4 w-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
+                              {openHistoryMenuId === paiement.dateID && (
+                                <div
+                                  className="absolute right-0 z-50 w-32 roundupower-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 top-full mt-1"
+                                  style={{ visibility: "visible", overflow: "visible" }}
+                                >
+                                  <div className="py-1">
+                                    <button
+                                      onClick={() => showPaymentHistory(paiement.dateID)}
+                                      className="flex items-center w-full px-4 py-2 text-left text-sm text-black hover:bg-blue-50"
                                     >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                      />
-                                    </svg>
-                                    Historique
-                                  </button>
+                                      <svg
+                                        className="mr-2 h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                        />
+                                      </svg>
+                                      Historique
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                          </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span>--</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1101,11 +1166,12 @@ export const PaiementList = () => {
 
             <div className="flex justify-center mt-6">
               <button
-                onClick={() => {
+                onClick={async () => {
+                  await refreshPlan(selectedPlan.planID); 
                   setSelectedPlan(null);
                   setActionType(null);
                 }}
-                className="px-8 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 cursor-pointer"
+                className="px-8 py-2 bg-red-500 text-white roundupower-lg hover:bg-red-600 cursor-pointer"
               >
                 Fermer
               </button>
@@ -1116,20 +1182,20 @@ export const PaiementList = () => {
 
       {showPaymentModal && selectedPlan && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white w-3/4 p-6 rounded-lg shadow-lg max-h-[90vh] overflow-y-auto text-black">
+          <div className="bg-white w-3/4 p-6 roundupower-lg shadow-lg max-h-[90vh] overflow-y-auto text-black">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold border-b pb-2">
                 Paiement - Plan {selectedPlan.planID}
               </h3>
             </div>
 
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200 shadow-sm">
+            <div className="mb-6 p-4 bg-blue-50 roundupower-lg border border-blue-200 shadow-sm">
               <p className="font-semibold text-lg text-center text-blue-800">
                 Montant restant à payer : <span>{formatMontant(selectedPlan.montantRestant)} DT</span>
               </p>
             </div>
 
-            <table className="w-full bg-white shadow rounded">
+            <table className="w-full bg-white shadow roundupower">
               <thead>
                 <tr className="bg-green-300">
                   <th className="p-2">Date</th>
@@ -1172,7 +1238,7 @@ export const PaiementList = () => {
                             preparePayment(echeance);
                           }}
                           disabled={isProcessingPayment}
-                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
+                          className="px-3 py-1 bg-blue-500 text-white roundupower hover:bg-blue-600 cursor-pointer"
                         >
                           Payer
                         </button>
@@ -1185,12 +1251,12 @@ export const PaiementList = () => {
 
             <div className="flex justify-center mt-6">
               <button
-                onClick={() => {
+                onClick={async () => {
+                  await refreshPlan(selectedPlan.planID);
                   setShowPaymentModal(false);
                   setSelectedPlan(null);
-                  refresh();
                 }}
-                className="px-8 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 cursor-pointer"
+                className="px-8 py-2 bg-red-500 text-white roundupower-lg hover:bg-red-600 cursor-pointer"
               >
                 Fermer
               </button>
@@ -1201,7 +1267,7 @@ export const PaiementList = () => {
 
       {showAmountModal && selectedEcheance && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full text-black">
+          <div className="bg-white p-6 roundupower-lg shadow-lg max-w-md w-full text-black">
             <div className="mb-4">
               <label className="block mb-2">
                 Montant restant: {formatMontant(selectedEcheance.montantDue)} DT
@@ -1224,7 +1290,7 @@ export const PaiementList = () => {
                     }
                   }
                 }}
-                className="w-full p-2 border rounded mt-2"
+                className="w-full p-2 border roundupower mt-2"
                 placeholder="Saisir le montant à payer"
               />
               <p className="text-sm mt-1">
@@ -1235,13 +1301,13 @@ export const PaiementList = () => {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowAmountModal(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 cursor-pointer"
+                className="px-4 py-2 bg-gray-500 text-white roundupower hover:bg-gray-600 cursor-pointer"
               >
                 Annuler
               </button>
               <button
                 onClick={confirmPaymentAmount}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
+                className="px-4 py-2 bg-blue-500 text-white roundupower hover:bg-blue-600 cursor-pointer"
               >
                 Confirmer
               </button>
@@ -1252,7 +1318,7 @@ export const PaiementList = () => {
 
       {showConfirmModal && selectedEcheance && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full text-black">
+          <div className="bg-white p-6 roundupower-lg shadow-lg max-w-md w-full text-black">
             <h3 className="text-xl font-bold mb-4">Confirmation du paiement</h3>
             <p className="mb-2">Vous allez payer: {formatMontant(parseFloat(paymentAmount || "0"))} DT</p>
             <p className="mb-4">sur un montant dû de: {formatMontant(selectedEcheance.montantDue)} DT</p>
@@ -1260,14 +1326,14 @@ export const PaiementList = () => {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowConfirmModal(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 cursor-pointer"
+                className="px-4 py-2 bg-gray-500 text-white roundupower hover:bg-gray-600 cursor-pointer"
               >
                 Annuler
               </button>
               <button
                 onClick={handlePayEcheance}
                 disabled={isProcessingPayment}
-                className={`px-4 py-2 text-white rounded cursor-pointer ${isProcessingPayment ? "bg-blue-400" : "bg-blue-500 hover:bg-blue-600"
+                className={`px-4 py-2 text-white roundupower cursor-pointer ${isProcessingPayment ? "bg-blue-400" : "bg-blue-500 hover:bg-blue-600"
                   }`}
               >
                 {isProcessingPayment ? "Traitement..." : "Confirmer"}
@@ -1277,48 +1343,49 @@ export const PaiementList = () => {
         </div>
       )}
 
-{showConfirmOnSiteModal && selectedEcheance && selectedPlan && (
-  <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-    <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full text-black">
-      <h3 className="text-xl font-bold mb-4 text-center">
-        {actionType === "confirmOnline" ? "Paiement après vérification - Plan " : "Confirmation sur place - Plan "} {selectedPlan.planID}
-      </h3>
-      <p className="text-center mb-4 text-green-600 font-semibold">
-        Merci de payer cette échéance que vous avez passé comme avance
-      </p>
-      <h4 className="text-lg font-semibold mb-2">Détails de l'avance :</h4>
-      <div className="mb-4 space-y-2">
-        <p><strong>Date de l'échéance :</strong> {selectedEcheance.echeanceDate}</p>
-        <p><strong>Montant de l'échéance :</strong> {formatMontant(selectedEcheance.montantDeEcheance)} DT</p>
-        <p><strong>Montant à payer :</strong> {formatMontant(selectedEcheance.montantDue)} DT</p>
-      </div>
-      <div className="flex justify-end gap-2">
-        <button
-          onClick={() => {
-            setShowConfirmOnSiteModal(false);
-            setSelectedEcheance(null);
-            setSelectedPlan(null);
-            setActionType(null);
-          }}
-          className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 cursor-pointer"
-        >
-          Annuler
-        </button>
-        <button
-          onClick={handlePayAdvanceEcheance}
-          disabled={isProcessingPayment}
-          className={`px-4 py-2 text-white rounded cursor-pointer ${isProcessingPayment ? "bg-blue-400" : "bg-blue-500 hover:bg-blue-600"}`}
-        >
-          {isProcessingPayment ? "Traitement..." : "Payer"}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+      {showConfirmOnSiteModal && selectedEcheance && selectedPlan && (
+        <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
+          <div className="bg-white p-6 roundupower-lg shadow-lg max-w-md w-full text-black">
+            <h3 className="text-xl font-bold mb-4 text-center">
+              {actionType === "confirmOnline" ? "Paiement après vérification - Plan " : "Confirmation sur place - Plan "} {selectedPlan.planID}
+            </h3>
+            <p className="text-center mb-4 text-green-600 font-semibold">
+              Merci de payer cette échéance que vous avez passé comme avance
+            </p>
+            <h4 className="text-lg font-semibold mb-2">Détails de l'avance :</h4>
+            <div className="mb-4 space-y-2">
+              <p><strong>Date de l'échéance :</strong> {selectedEcheance.echeanceDate}</p>
+              <p><strong>Montant de l'échéance :</strong> {formatMontant(selectedEcheance.montantDeEcheance)} DT</p>
+              <p><strong>Montant à payer :</strong> {formatMontant(selectedEcheance.montantDue)} DT</p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={async () => {
+                  await refreshPlan(selectedPlan.planID); 
+                  setShowConfirmOnSiteModal(false);
+                  setSelectedEcheance(null);
+                  setSelectedPlan(null);
+                  setActionType(null);
+                }}
+                className="px-4 py-2 bg-gray-500 text-white roundupower hover:bg-gray-600 cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handlePayAdvanceEcheance}
+                disabled={isProcessingPayment}
+                className={`px-4 py-2 text-white roundupower cursor-pointer ${isProcessingPayment ? "bg-blue-400" : "bg-blue-500 hover:bg-blue-600"}`}
+              >
+                {isProcessingPayment ? "Traitement..." : "Payer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showVerifySignatureModal && selectedPlan && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full text-black">
+          <div className="bg-white p-6 roundupower-lg shadow-lg max-w-md w-full text-black">
             <h3 className="text-xl font-bold mb-4 text-center">Étape 1 : Vérification de signature</h3>
             <div className="mb-4">
               <label className="block mb-2">Pièce jointe (PDF uniquement, max 1 fichier) :</label>
@@ -1326,7 +1393,7 @@ export const PaiementList = () => {
                 type="file"
                 accept="application/pdf"
                 onChange={handleFileChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border roundupower"
               />
               {selectedFile && (
                 <p className="mt-2 text-sm text-gray-600">Fichier sélectionné : {selectedFile.name}</p>
@@ -1334,20 +1401,21 @@ export const PaiementList = () => {
             </div>
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => {
+                onClick={async () => {
+                  await refreshPlan(selectedPlan.planID);
                   setShowVerifySignatureModal(false);
                   setSelectedFile(null);
                   setSelectedPlan(null);
                   setActionType(null);
                 }}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 cursor-pointer"
+                className="px-4 py-2 bg-gray-500 text-white roundupower hover:bg-gray-600 cursor-pointer"
               >
                 Annuler
               </button>
               <button
                 onClick={handleVerifySignature}
                 disabled={isProcessingPayment || !selectedFile}
-                className={`px-4 py-2 text-white rounded cursor-pointer ${isProcessingPayment || !selectedFile ? "bg-blue-400" : "bg-blue-500 hover:bg-blue-600"}`}
+                className={`px-4 py-2 text-white roundupower cursor-pointer ${isProcessingPayment || !selectedFile ? "bg-blue-400" : "bg-blue-500 hover:bg-blue-600"}`}
               >
                 {isProcessingPayment ? "Vérification..." : "Vérifier"}
               </button>
@@ -1358,7 +1426,7 @@ export const PaiementList = () => {
 
       {showHistoryModal && selectedEcheanceDetails && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto text-black">
+          <div className="bg-white p-6 roundupower-lg shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto text-black">
             <div className="text-center mb-6 border-b border-gray-200 pb-3">
               <h3 className="text-xl font-bold">
                 Échéance {selectedEcheanceDetails.echeanceDate}
@@ -1376,7 +1444,7 @@ export const PaiementList = () => {
 
             {selectedEcheanceDetails.paiementResponses &&
               selectedEcheanceDetails.paiementResponses.length > 0 ? (
-              <table className="w-full bg-white shadow rounded-lg overflow-hidden">
+              <table className="w-full bg-white shadow roundupower-lg overflow-hidden">
                 <thead>
                   <tr className="bg-blue-100">
                     <th className="p-3 text-lg ">Date de paiement</th>
@@ -1405,11 +1473,14 @@ export const PaiementList = () => {
             )}
             <div className="flex justify-center mt-6">
               <button
-                onClick={() => {
+                onClick={async () => {
+                  if (selectedPlan) {
+                    await refreshPlan(selectedPlan.planID); 
+                  }
                   setShowHistoryModal(false);
                   setSelectedEcheanceDetails(null);
                 }}
-                className="px-8 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 cursor-pointer"
+                className="px-8 py-2 bg-red-500 text-white roundupower-lg hover:bg-red-600 cursor-pointer"
               >
                 Fermer
               </button>
@@ -1420,7 +1491,7 @@ export const PaiementList = () => {
 
       {showNewPlanModal && selectedPlan && (
         <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto text-black">
+          <div className="bg-white p-6 roundupower shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto text-black">
             <h2 className="text-2xl font-bold mb-6 text-center">Nouveau Plan de Paiement</h2>
             <div className="mb-4">
               <label className="block mb-2">
@@ -1432,11 +1503,19 @@ export const PaiementList = () => {
               <select
                 value={optionPaiement}
                 onChange={(e) => {
-                  setOptionPaiement(e.target.value);
+                  const newOption = e.target.value;
+                  if (newOption === "libre" && selectedPlan && getAcheteurScore(selectedPlan) < 80) {
+                    toast.error(
+                      "Votre score est insuffisant ! Vous ne pouvez pas utiliser cette option.",
+                      { autoClose: 3000 }
+                    );
+                    return;
+                  }
+                  setOptionPaiement(newOption);
                   setResultat(null);
                   setDatesEcheances([]);
                   setValeur(0);
-                  setShowInitialPaymentPrompt(e.target.value !== "");
+                  setShowInitialPaymentPrompt(newOption !== "");
                   setShowInitialPaymentInput(false);
                   setShowLibreModal(false);
                   setInitialPayment(0);
@@ -1462,13 +1541,13 @@ export const PaiementList = () => {
                 <div className="flex gap-2 mb-4">
                   <button
                     onClick={() => handleInitialPayment(true)}
-                    className="p-2 bg-blue-500 text-white rounded flex-1"
+                    className="p-2 bg-blue-500 text-white roundupower flex-1"
                   >
                     Oui
                   </button>
                   <button
                     onClick={() => handleInitialPayment(false)}
-                    className="p-2 bg-gray-500 text-white rounded flex-1"
+                    className="p-2 bg-gray-500 text-white roundupower flex-1"
                   >
                     Non
                   </button>
@@ -1490,7 +1569,7 @@ export const PaiementList = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={handleInitialPaymentSubmit}
-                    className="p-2 bg-blue-500 text-white rounded flex-1"
+                    className="p-2 bg-blue-500 text-white roundupower flex-1"
                   >
                     Suivant
                   </button>
@@ -1500,7 +1579,7 @@ export const PaiementList = () => {
                       setShowInitialPaymentInput(false);
                       setInitialPayment(0);
                     }}
-                    className="p-2 bg-red-500 text-white rounded flex-1"
+                    className="p-2 bg-red-500 text-white roundupower flex-1"
                   >
                     Fermer
                   </button>
@@ -1528,13 +1607,13 @@ export const PaiementList = () => {
                 />
                 <button
                   onClick={handleCalculer}
-                  className="p-2 bg-blue-500 text-white rounded w-full mb-4"
+                  className="p-2 bg-blue-500 text-white roundupower w-full mb-4"
                 >
                   Calculer
                 </button>
                 {resultat && (
                   <div className="mt-4">
-                    <div className="bg-gray-50 p-3 rounded mb-3">
+                    <div className="bg-gray-50 p-3 roundupower mb-3">
                       <p><strong>Nombre d'échéances :</strong> {resultat.nombreEcheances}</p>
                       <p><strong>Montant par échéance :</strong> {formatMontant(resultat.montantEcheance)} DT</p>
                     </div>
@@ -1562,7 +1641,7 @@ export const PaiementList = () => {
                     <button
                       onClick={handleValidation}
                       disabled={isSubmitting}
-                      className={`p-2 rounded w-full ${isSubmitting ? 'bg-gray-400' : 'bg-green-600 text-white'}`}
+                      className={`p-2 roundupower w-full ${isSubmitting ? 'bg-gray-400' : 'bg-green-600 text-white'}`}
                     >
                       {isSubmitting ? "Validation en cours..." : "Valider"}
                     </button>
@@ -1584,7 +1663,7 @@ export const PaiementList = () => {
                 </strong>
                 <button
                   onClick={addLibreEcheance}
-                  className="p-2 bg-blue-500 text-white rounded w-full mb-4"
+                  className="p-2 bg-blue-500 text-white roundupower w-full mb-4"
                 >
                   Ajouter une échéance
                 </button>
@@ -1607,7 +1686,7 @@ export const PaiementList = () => {
                       />
                       <button
                         onClick={() => removeLibreEcheance(index)}
-                        className="p-1 bg-red-500 text-white rounded"
+                        className="p-1 bg-red-500 text-white roundupower"
                       >
                         X
                       </button>
@@ -1617,35 +1696,39 @@ export const PaiementList = () => {
                 <button
                   onClick={validateLibrePlan}
                   disabled={isSubmitting}
-                  className={`p-2 rounded w-full ${isSubmitting ? 'bg-gray-400' : 'bg-green-600 text-white'}`}
+                  className={`p-2 roundupower w-full ${isSubmitting ? 'bg-gray-400' : 'bg-green-600 text-white'}`}
                 >
                   {isSubmitting ? "Validation en cours..." : "Valider"}
                 </button>
               </div>
             )}
-            <button
-              onClick={() => {
-                setShowNewPlanModal(false);
-                setOptionPaiement("");
-                setValeur(0);
-                setResultat(null);
-                setDatesEcheances([]);
-                setSelectedFactures([]);
-                setSelectedPlan(null);
-                setShowInitialPaymentPrompt(false);
-                setShowInitialPaymentInput(false);
-                setShowLibreModal(false);
-                setInitialPayment(0);
-                setLibreEcheances([]);
-                setCalculatedEcheances([]);
-              }}
-              className="mt-4 p-2 bg-red-500 text-white rounded w-full"
-            >
-              Fermer
-            </button>
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={async () => {
+                  if (selectedPlan) {
+                    await refreshPlan(selectedPlan.planID); 
+                  }
+                  setShowNewPlanModal(false);
+                  setOptionPaiement("");
+                  setValeur(0);
+                  setResultat(null);
+                  setDatesEcheances([]);
+                  setInitialPayment(0);
+                  setSelectedFactures([]);
+                  setSelectedPlan(null);
+                  setShowLibreModal(false);
+                  setLibreEcheances([]);
+                  setCalculatedEcheances([]);
+                }}
+                className="px-8 py-2 bg-red-500 text-white roundupower-lg hover:bg-red-600 cursor-pointer"
+              >
+                Fermer
+              </button>
+            </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };
