@@ -61,7 +61,7 @@ export const FactureList = () => {
 
   const hasCreanceManagementWritePermission = userPermissions?.role?.rolePermissionResponses?.some(
     (perm: any) =>
-      perm.permissionDefinition.permissionName === "Gestion des données de créances (Acheteurs/Factures)" && perm.canWrite
+      perm.permissionDefinition.permissionName === "Gestion des données de créances (Acheteurs/Factures)" && perm.canCreate
   );
 
   const hasLitigeCreatePermission = userPermissions?.role?.rolePermissionResponses?.some(

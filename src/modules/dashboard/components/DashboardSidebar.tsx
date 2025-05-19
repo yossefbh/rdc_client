@@ -267,13 +267,15 @@ export const DashboardSidebar = ({ onSelect }: Props) => {
         {user && (
           <div className="mt-7 relative">
             <div
-              className="p-3 bg-blue-700 rounded-lg border-blue-600 cursor-pointer hover:bg-blue-800 flex items-center gap-3"
+              className="p-2 bg-blue-700 rounded-lg border-blue-600 cursor-pointer hover:bg-blue-800 flex items-center gap-3"
               onClick={() => setShowLogout(!showLogout)}
             >
-              <FaUser className="text-white text-3xl shrink-0" />
+              <FaUser className="text-white text-4xl shrink-0" />
               <div className="flex flex-col ">
-                <p className="font-semibold text-white">User : {user.username}</p>
-                <p className="font-bold text-white whitespace-nowrap">{user.role?.roleName || 'Non défini'}</p>
+                <p className="font-semibold text-white text-lg">User : {user.username}</p>
+                <p className="font-bold text-white whitespace-nowrap text-lg">
+                    {user.role?.roleName?.toLowerCase().includes('gestionnaire') ? 'Gestionnaire' : user.role?.roleName || 'Non défini'}
+                </p>       
               </div>
             </div>
 

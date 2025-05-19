@@ -43,6 +43,14 @@ export default function ActivateAccount() {
       toast.error("Email non valide. Veuillez vérifier le lien d'activation.", { position: 'top-center' });
       return;
     }
+     if (username.length < 4 ) {
+      toast.error('Le username doit contenir au moins 4 caractères.', { position: 'top-center' });
+      return;
+    }
+    if(username.length > 10){
+      toast.error('Le username ne doit pas dépasser 10 caractères.', { position: 'top-center' });
+      return;
+    }
 
     if (password.length < 8) {
       toast.error('Le mot de passe doit contenir au moins 8 caractères.', { position: 'top-center' });
