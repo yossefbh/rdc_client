@@ -71,7 +71,7 @@ export const FactureList = () => {
 
   const hasPlanPaiementWritePermission = userPermissions?.role?.rolePermissionResponses?.some(
     (perm: any) =>
-      perm.permissionDefinition.permissionName === "Gestion des plan de paiements" && perm.canWrite
+      perm.permissionDefinition.permissionName === "Gestion des plan de paiements" && perm.canCreate
   );
 
   const formatMontant = (montant: number) => {
@@ -523,56 +523,54 @@ export const FactureList = () => {
         </span>
       ),
     },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 200,
-      sortable: false,
-      filterable: false,
-      headerAlign: 'center',
-      align: 'center',
-      headerClassName: 'text-lg font-bold',
-      renderCell: (params) => (
-        <div className="relative flex justify-center items-center h-full">
-          <button
-            onClick={(event) => toggleDropdown(params.row.factureID, params.row.status, event)}
-            className="text-black hover:text-gray-800 text-2xl p-0.5 rounded-full"
+ {
+    field: 'actions',
+    headerName: 'Actions',
+    width: 200,
+    sortable: false,
+    filterable: false,
+    headerAlign: 'center',
+    align: 'center',
+    headerClassName: 'text-lg font-bold',
+    renderCell: (params) => (
+      <div className="relative flex justify-center items-center h-full">
+        <button
+          onClick={(event) => toggleDropdown(params.row.factureID, params.row.status, event)}
+          className="text-black hover:text-gray-800 text-2xl p-0.5 rounded-full"
+        >
+          ...
+        </button>
+        {openDropdownId === params.row.factureID && hasLitigeCreatePermission && (
+          <div
+            className="absolute top-[100%] left-1/2 -translate-x-1/2 w-45 bg-white border rounded-md shadow-lg z-[1000] -mt-1"
+            style={{ minHeight: '40px' }}
           >
-            ...
-          </button>
-          {openDropdownId === params.row.factureID && (
-            <div
-              className="absolute top-[100%] left-1/2 -translate-x-1/2 w-45 bg-white border rounded-md shadow-lg z-[1000] -mt-1"
-              style={{ minHeight: '40px' }}
-            >
-              <div className="py-1">
-                {hasLitigeCreatePermission && (
-                  <button
-                    onClick={(event) => handleFaireLitige(params.row.factureID, event)}
-                    className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
-                  >
-                    <svg
-                      className="inline mr-2 h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    Déclarer un Litige
-                  </button>
-                )}
-              </div>
+            <div className="py-1">
+              <button
+                onClick={(event) => handleFaireLitige(params.row.factureID, event)}
+                className="block w-full text-left px-4 py-2 text-sm text-black hover:bg-blue-50"
+              >
+                <svg
+                  className="inline mr-2 h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Déclarer un Litige
+              </button>
             </div>
-          )}
-        </div>
-      ),
-    },
+          </div>
+        )}
+      </div>
+    ),
+  },
   ];
 
   const selectedAcheteurScore = selectedAcheteur !== null
