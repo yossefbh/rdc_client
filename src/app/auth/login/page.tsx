@@ -60,7 +60,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="max-w-600 w-135 p-10 bg-white rounded-xl shadow-lg">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-blue-500">Connectez-vous à votre compte</h2>
+          <h2 className="text-3xl font-bold text-black">Connectez-vous à votre compte</h2>
           <p className="text-gray-600 mt-6 text-lg">
             POUR FAIRE PLUS SIMPLE ! MERCI DE REMPLIR LES CHAMPS CI-DESSOUS
           </p>

@@ -455,6 +455,17 @@ export const UserList = () => {
             <p className="text-sm text-gray-700 mb-4 text-center">
               Lorsque vous changez le rôle, les anciennes permissions du rôle actuel vont changer.
             </p>
+             <div className="mb-4">
+              <p className="w-full border p-2 rounded-lg text-black bg-gray-100">
+                {users.find((user) => user.userID === selectedUserId)?.username || 'N/A'}
+              </p>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-black mb-1">Rôle actuel</label>
+              <p className="w-full border p-2 rounded-lg text-black bg-gray-100">
+                {roles.find((role) => role.roleID === currentUserRoleId)?.roleName || 'N/A'}
+              </p>
+            </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-black mb-1">Nouveau Rôle</label>
               <select

@@ -73,6 +73,12 @@ export const LitigeList = () => {
       perm.permissionDefinition.permissionName === "Gestion des litiges" && perm.canWrite
   );
 
+  const hasLitigeManagementPermission = userPermissions?.role?.rolePermissionResponses?.some(
+  (perm: any) =>
+    perm.permissionDefinition.permissionName === "Gestion des litiges" &&
+    (perm.canRead || perm.canWrite)
+);
+
   const hasLitigeManagementReadPermission = userPermissions?.role?.rolePermissionResponses?.some(
     (perm: any) =>
       perm.permissionDefinition.permissionName === "Gestion des litiges" && perm.canRead
@@ -481,7 +487,7 @@ export const LitigeList = () => {
   return (
     <div className="p-4">
       <div className="mb-4 flex gap-4 items-center">
-        {hasLitigeManagementWritePermission && (
+        {hasLitigeManagementPermission && (
           <button
             onClick={() => setShowLitigeTypesModal(true)}
             className="px-4 py-2 bg-blue-700 text-amber-50 rounded hover:bg-blue-400 cursor-pointer"
@@ -691,7 +697,7 @@ export const LitigeList = () => {
 
       {/* Modal pour la résolution du litige */}
       {showResolutionModal && selectedLitige && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-[60]">
+        <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-[60]">
           <div className="bg-white p-6 rounded shadow-lg max-w-md w-full relative text-black">
             <button
               onClick={() => {
@@ -728,14 +734,14 @@ export const LitigeList = () => {
                     <div className="flex justify-center gap-4">
                       <button
                         onClick={() => setIsJustified(true)}
-                        className="p-2 bg-green-600 text-white rounded w-1/3"
+                        className="p-1 bg-green-600 text-white rounded w-1/3"
                         disabled={isSubmitting}
                       >
                         Oui
                       </button>
                       <button
                         onClick={() => handleRejectLitige(selectedLitige.litigeID)}
-                        className="p-2 bg-red-600 text-white rounded w-1/3"
+                        className="p-1 bg-red-600 text-white rounded w-1/3"
                         disabled={isSubmitting}
                       >
                         Non
@@ -821,7 +827,7 @@ export const LitigeList = () => {
                   setIsJustified(null);
                   setCorrectedData({ correctedMontantTotal: "", correctedAmountDue: "" });
                 }}
-                className="p-3 bg-red-500 text-white rounded w-1/3 text-lg"
+                className="p-1 bg-red-500 text-white rounded w-1/3 text-lg"
               >
                 Fermer
               </button>
@@ -906,26 +912,30 @@ export const LitigeList = () => {
                             <p>
                               <strong>Description :</strong> {litigeType.litigeTypeDescription}
                             </p>
-                            <button
-                              onClick={() => setEditingLitigeType(litigeType)}
-                              className="mt-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
-                            >
-                              Modifier
-                            </button>
+                            {hasLitigeManagementWritePermission && (
+                              <button
+                                onClick={() => setEditingLitigeType(litigeType)}
+                                className="mt-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
+                              >
+                                Modifier
+                              </button>
+                            )}
                           </div>
                         )}
                       </li>
                     ))}
                   </ul>
                 )}
-                <div className="flex justify-center mt-4">
-                  <button
-                    onClick={() => setShowCreateLitigeTypeModal(true)}
-                    className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 w-100"
-                  >
-                    Nouveau type
-                  </button>
-                </div>
+                {hasLitigeManagementWritePermission && (
+                  <div className="flex justify-center mt-4">
+                    <button
+                      onClick={() => setShowCreateLitigeTypeModal(true)}
+                      className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 w-100"
+                    >
+                      Nouveau type
+                    </button>
+                  </div>
+                )}
               </>
             )}
             <div className="flex justify-center mt-4">
@@ -942,7 +952,7 @@ export const LitigeList = () => {
 
       {/* Modal pour créer un nouveau type de litige */}
       {showCreateLitigeTypeModal && (
-        <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-black/10 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded shadow-lg max-w-md w-full text-black">
             <h2 className="text-2xl font-bold mb-6 text-center">Créer un type de litige</h2>
             <div className="mb-4">

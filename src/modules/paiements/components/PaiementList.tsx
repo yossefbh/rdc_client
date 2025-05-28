@@ -913,7 +913,7 @@ export const PaiementList = () => {
                         d="M5 13l4 4L19 7"
                       />
                     </svg>
-                    Confirmation sur place
+                    Activation sur place
                   </button>
                 )}
                 {hasPlanPaiementWritePermission && params.row.planStatus === "EN_ATTENTE" && (
@@ -934,7 +934,7 @@ export const PaiementList = () => {
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                       />
                     </svg>
-                    Confirmation en ligne
+                    Activation digitale
                   </button>
                 )}
                 {hasPlanPaiementCreatePermission && params.row.planStatus === "ANNULE" && (
@@ -1270,7 +1270,7 @@ export const PaiementList = () => {
           <div className="bg-white p-6 roundupower-lg shadow-lg max-w-md w-full text-black">
             <div className="mb-4">
               <label className="block mb-2">
-                Montant restant: {formatMontant(selectedEcheance.montantDue)} DT
+                Montant à payer: {formatMontant(selectedEcheance.montantDue)} DT
               </label>
               <input
                 type="number"

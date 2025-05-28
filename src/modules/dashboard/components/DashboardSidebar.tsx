@@ -242,7 +242,7 @@ export const DashboardSidebar = ({ onSelect }: Props) => {
               }`}
             >
               <FaUser className="mr-3" />
-              Utilisateurs
+              Comptes
             </li>
           )}
           <li

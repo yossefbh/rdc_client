@@ -110,7 +110,7 @@ export default function ActivateAccount() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="bg-white p-10 rounded-xl shadow-lg w-110 max-w-400">
-        <h2 className="text-3xl font-bold text-center text-blue-500 mb-6">Activation du compte</h2>
+        <h2 className="text-3xl font-bold text-center text-black whitespace-nowrap mb-6">Terminez votre inscription</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-black mb-1">Email</label>
